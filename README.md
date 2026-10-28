@@ -4,6 +4,8 @@ A MuJoCo digital twin of a two-arm (I2RT YAM) water-cup station: pick a paper or
 
 ![level 1](site/demo_level1.gif)
 
+Project page: https://everest-dual-yam-twin.netlify.app
+
 ## What is in here
 
 | Part | Where | What it does |
