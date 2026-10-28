@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Everest dual-YAM digital twin</title>
+<meta name="description" content="A MuJoCo digital twin of a two-arm water-cup station: blind, contact-driven skills, real-data replay, Monte Carlo evaluation.">
+<style>
+:root{--bg:#0e1015;--panel:#151922;--line:#262d3d;--text:#e7eaf1;--muted:#8a93a8;--acc:#7c8cff;--cup:#4fb3ff;--tap:#ffb454;--ok:#4cd08a;--bad:#ff6b6b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:40px 20px 80px}h1{font-size:34px;margin:0 0 8px}h2{margin:48px 0 12px;font-size:22px}
+p,li{color:#c9cfdd}.muted{color:var(--muted)}a{color:var(--acc)}code{background:var(--panel);border:1px solid var(--line);padding:1px 6px;border-radius:6px;font-size:14px}
+pre{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card img{width:100%;border-radius:8px;display:block;margin-bottom:8px}table{width:100%;border-collapse:collapse}th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-weight:500}
+.bad{color:var(--bad)}.ok{color:var(--ok)}.btn{display:inline-block;background:var(--acc);color:#0b0d18;padding:9px 16px;border-radius:9px;font-weight:600;text-decoration:none;margin-right:8px}
+</style></head><body><main>
+<h1>Everest dual-YAM digital twin</h1>
+<p class="muted">Two I2RT YAM arms, a water dispenser with a 360° lever, paper and plastic cups. One cup in, a 7-second pour, one cup out, with skills that only feel what real motors report.</p>
+<p><a class="btn" href="https://github.com/Shaurya-Srivastav/everest-dual-yam-twin">Code on GitHub</a><a class="btn" style="background:var(--panel);color:var(--text);border:1px solid var(--line)" href="https://github.com/Shaurya-Srivastav/everest-dual-yam-twin#run-it">Run it locally</a></p>
+
+<h2>Rendered from the live physics</h2>
+<div class="grid">
+<div class="card"><img src="demo_level1.gif" alt="Level 1" loading="lazy"><b>Level 1</b><div class="muted">Cup from the coaster, under the spout, lever lifted for 7 s, back into the coaster.</div></div>
+<div class="card"><img src="demo_level2.gif" alt="Level 2" loading="lazy"><b>Level 2</b><div class="muted">Pin the stack, wiggle the top cup free, flip it with one wrist roll, serve.</div></div>
+<div class="card"><img src="demo_level4.gif" alt="Level 4" loading="lazy"><b>Level 4</b><div class="muted">The lever angle is unknown: feel for it, park it, touch again to confirm.</div></div>
+</div>
+
+<h2>How it works</h2>
+<ul>
+<li><b>Blind skills.</b> No cameras and no true poses: joint encoders, motor torque, gripper width and effort. Contact is the torque residual after the controller's own gravity and friction model.</li>
+<li><b>Handle search.</b> A fingertip circles the valve and stops at ~0.9 N, below the ~1.5 N the swivel needs to turn; the handle's yaw comes from the known hand and handle shapes, then it is parked and touched again.</li>
+<li><b>Cup search.</b> Pecks from above; every outcome rules out cup positions that would contradict it (3-6 mm fit).</li>
+<li><b>One-arm flip.</b> Hand turned 60° off the arm's line and tilted 20° down: joint 6 alone rolls the held cup 180° with the hand fixed.</li>
+<li><b>Real-data replay.</b> The taught Level 1 waypoints from the physical robot, played through the simulated control loop, put the cup <b>0.9 mm</b> from the outlet axis and back in the coaster.</li>
+</ul>
+
+<h2>Honest status</h2>
+<table><tr><th>Level</th><th>Randomized trials passed</th><th>Target</th></tr>
+<tr><td>1 upright cup</td><td class="bad">79 %</td><td>98 %</td></tr><tr><td>2 stack, height known</td><td class="bad">38 %</td><td>98 %</td></tr>
+<tr><td>3 stack, height unknown</td><td class="bad">21 %</td><td>95 %</td></tr><tr><td>4 lever angle unknown</td><td class="bad">25 %</td><td>95 %</td></tr>
+<tr><td>5 cup anywhere</td><td class="bad">33 %</td><td>90 %</td></tr></table>
+<p class="muted">24 trials per level with randomized positions, friction, mass, gains, base calibration, sensor noise and delay. Nominal runs of Levels 1 and 4 pass the full referee; Levels 2, 3 and 5 finish the task but still brush the remaining stack or target cup with the arm housing. Simulation only: nothing has run on the real arms. Details in <a href="https://github.com/Shaurya-Srivastav/everest-dual-yam-twin/blob/main/docs/RESULTS.md">docs/RESULTS.md</a>.</p>
+
+<h2>The live dashboard</h2>
+<p>The interactive twin (30-50 fps view with a view cube, step timeline with scrub, telemetry, Monte Carlo and a beat-synced Dance Mode) needs a Python process running MuJoCo, which a static host like Netlify cannot run. Start it locally:</p>
+<pre>git clone https://github.com/Shaurya-Srivastav/everest-dual-yam-twin
+git clone https://github.com/i2rt-robotics/i2rt everest-dual-yam-twin/third_party/i2rt
+cd everest-dual-yam-twin && pip install -r requirements.txt && ./run_sim.sh   # http://127.0.0.1:8090</pre>
+</main></body></html>

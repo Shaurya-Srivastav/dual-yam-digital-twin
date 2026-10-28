@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Everest dual-YAM twin</title>
+<style>
+:root{
+  --bg:#0e1015; --panel:#151922; --panel2:#1b2030; --line:#262d3d; --text:#e7eaf1; --muted:#8a93a8;
+  --cup:#4fb3ff; --tap:#ffb454; --ok:#4cd08a; --warn:#f2c14e; --bad:#ff6b6b; --acc:#7c8cff;
+  --s1:8px; --s2:16px; --s3:24px; --rail:clamp(340px,28vw,460px);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font:13px/1.45 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;overflow:hidden}
+button,select,input{font:inherit;color:inherit}
+#app{display:grid;grid-template-columns:1fr var(--rail);grid-template-rows:48px 1fr;height:100%}
+header{grid-column:1/3;display:flex;align-items:center;gap:var(--s2);padding:0 var(--s2);background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:14px;font-weight:600;letter-spacing:.2px}
+header .sub{color:var(--muted)}
+.badge{padding:2px 10px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.6px;background:var(--panel2);border:1px solid var(--line)}
+.badge.RUNNING{color:var(--ok);border-color:var(--ok)} .badge.PAUSED{color:var(--warn);border-color:var(--warn)}
+.badge.FAULT{color:var(--bad);border-color:var(--bad)} .badge.DONE{color:var(--acc);border-color:var(--acc)}
+.badge.DANCE,.badge.SCRUB{color:#d58cff;border-color:#d58cff}
+.spacer{flex:1}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+#stage{position:relative;min-width:0;background:#07080b;overflow:hidden}
+#view{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab}
+#view:active{cursor:grabbing}
+#cube{position:absolute;top:var(--s2);right:var(--s2);width:132px;height:132px;cursor:pointer}
+#toolbar{position:absolute;left:var(--s2);bottom:var(--s2);display:flex;gap:var(--s1);align-items:center;background:rgba(21,25,34,.82);border:1px solid var(--line);border-radius:10px;padding:var(--s1);backdrop-filter:blur(8px)}
+#toolbar button{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:4px 10px;cursor:pointer}
+#toolbar button.on{border-color:var(--acc);color:var(--acc)}
+#toolbar label{color:var(--muted);display:flex;align-items:center;gap:6px}
+#toolbar input[type=range]{width:120px;accent-color:var(--acc)}
+#hud{position:absolute;left:var(--s2);top:var(--s2);color:var(--muted);font-size:11px;text-shadow:0 1px 2px #000}
+#banner{position:absolute;left:50%;top:var(--s2);transform:translateX(-50%);padding:6px 14px;border-radius:8px;background:rgba(255,107,107,.15);border:1px solid var(--bad);color:var(--bad);display:none;max-width:60%}
+aside{display:flex;flex-direction:column;min-height:0;background:var(--panel);border-left:1px solid var(--line)}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;padding:10px 0;background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;font-weight:600}
+.tabs button.on{color:var(--text);border-bottom-color:var(--acc)}
+.pane{display:none;flex:1;min-height:0;overflow:auto;padding:var(--s2)}
+.pane.on{display:block}
+h3{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:var(--s2) 0 var(--s1)}
+h3:first-child{margin-top:0}
+.row{display:flex;gap:var(--s1);align-items:center;flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{background:var(--panel2);border:0;border-right:1px solid var(--line);padding:6px 12px;cursor:pointer;color:var(--muted)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:#262e4d;color:var(--text)}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--acc)}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#0b0d18}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.4;cursor:default}
+.lvl{display:grid;grid-template-columns:1fr;gap:6px}
+.lvl button{display:flex;gap:10px;align-items:baseline;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+.lvl button.on{border-color:var(--acc);background:#1f2542}
+.lvl b{width:20px;color:var(--acc)} .lvl span{color:var(--muted);font-size:12px}
+#ringbox{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s2)}
+#ring{width:92px;height:92px;flex:none}
+#ringbox .big{font-size:22px;font-weight:700} #ringbox .small{color:var(--muted);font-size:12px}
+.group{margin-top:var(--s1)}
+.group>.gh{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px;letter-spacing:.8px;text-transform:uppercase;margin:var(--s1) 0 4px}
+.group>.gh i{flex:1;height:1px;background:var(--line)}
+.step{display:grid;grid-template-columns:10px 1fr auto;gap:2px 8px;align-items:start;padding:6px 8px;border-radius:8px;border:1px solid transparent;cursor:default}
+.step:hover{background:var(--panel2)}
+.step .dot{width:8px;height:8px;border-radius:50%;margin-top:5px}
+.step.cup .dot{background:var(--cup)} .step.tap .dot{background:var(--tap)} .step.none .dot{background:var(--muted)}
+.step .t{font-weight:600} .step .d{color:var(--muted);font-size:12px;grid-column:2/4}
+.step .st{font-size:11px;color:var(--muted)}
+.step.waiting{opacity:.5}
+.step.running{background:#1a2036;border-color:#2c3764}
+.step.running .st{color:var(--ok)} .step.done .st{color:var(--ok)} .step.failed .st{color:var(--bad)}
+.step.done,.step.running,.step.failed{cursor:pointer}
+.step.failed .d{color:var(--bad)}
+#events{font-size:12px;color:var(--muted);max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:#10131b}
+#events div{padding:1px 0} #events b{color:var(--text);font-weight:500}
+.chart{margin-bottom:var(--s2)} .chart canvas{width:100%;height:92px;display:block;background:#10131b;border:1px solid var(--line);border-radius:8px}
+.chart .l{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-bottom:4px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:12px} .kv span:nth-child(odd){color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:12px} th,td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left} th{color:var(--muted);font-weight:500}
+.ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)} .muted{color:var(--muted)}
+.card{border:1px solid var(--line);border-radius:10px;padding:var(--s1) 12px;background:var(--panel2);margin-bottom:var(--s1)}
+.track{display:flex;align-items:center;gap:10px;cursor:pointer} .track.on{border-color:var(--acc)}
+.track b{display:block} .track span{color:var(--muted);font-size:12px}
+#ytwrap{aspect-ratio:16/9;background:#000;border-radius:8px;overflow:hidden;margin:var(--s1) 0}
+#ytwrap iframe{width:100%;height:100%}
+input[type=number],input[type=text]{background:#10131b;border:1px solid var(--line);border-radius:6px;padding:4px 8px;width:80px}
+input[type=file]{max-width:100%}
+a{color:var(--acc)}
+.res li{list-style:none;padding:2px 0} .res li::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;background:var(--ok)} .res li.f::before{background:var(--bad)}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Everest dual-YAM twin</h1><span class="sub">cup arm <b style="color:var(--cup)">●</b> &nbsp;tap arm <b style="color:var(--tap)">●</b></span>
+    <span class="spacer"></span>
+    <span class="mono muted" id="clock">t 0.0 s</span>
+    <span class="mono muted" id="perf"></span>
+    <span class="badge" id="mode">IDLE</span>
+  </header>
+
+  <main id="stage">
+    <canvas id="view"></canvas>
+    <canvas id="cube" width="264" height="264"></canvas>
+    <div id="hud"></div>
+    <div id="banner"></div>
+    <div id="toolbar">
+      <button id="bFit" title="Fit (F)">Fit</button>
+      <button id="bOrtho" title="Orthographic (O)">Ortho</button>
+      <button id="bFollow" title="Follow the hand">Follow</button>
+      <button id="bOverlay" title="Believed (cyan) vs true (orange)">Belief</button>
+      <label>Speed <input id="speed" type="range" min="-2" max="2" step="0.05" value="0"><b id="speedv" class="mono">1.00×</b></label>
+    </div>
+  </main>
+
+  <aside>
+    <div class="tabs"><button data-tab="run" class="on">Run</button><button data-tab="tele">Telemetry</button><button data-tab="proof">Proof</button><button data-tab="dance">Dance</button></div>
+
+    <section class="pane on" id="p-run">
+      <h3>Level</h3>
+      <div class="lvl" id="levels"></div>
+      <div class="row" style="margin-top:var(--s1)">
+        <div class="seg" id="mat"><button data-m="paper" class="on">Paper</button><button data-m="plastic">Plastic</button></div>
+        <label class="row muted"><input type="checkbox" id="rand"> randomize</label>
+        <label class="row muted">seed <input type="number" id="seed" value="0" min="0"></label>
+      </div>
+      <div class="row" style="margin-top:var(--s2)">
+        <button class="btn primary" id="bRun">Run</button><button class="btn" id="bStep">Step</button><button class="btn" id="bPause">Pause</button>
+        <button class="btn danger" id="bAbort">Abort</button><button class="btn" id="bReset">Reset</button>
+      </div>
+      <div id="ringbox">
+        <svg id="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="none" stroke="#262d3d" stroke-width="9"/><circle id="ringArc" cx="50" cy="50" r="42" fill="none" stroke="#4fb3ff" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 264" transform="rotate(-90 50 50)"/><text id="ringTxt" x="50" y="54" text-anchor="middle" fill="#e7eaf1" font-size="17" font-weight="700">0.0</text></svg>
+        <div><div class="big" id="pourBig">Pour 0.0 / 7.0 s</div><div class="small" id="pourSmall">handle 0° · closed</div><div class="small" id="progressTxt"></div></div>
+      </div>
+      <h3>Steps <span class="muted" style="text-transform:none;letter-spacing:0">(click a finished step to scrub back to it)</span></h3>
+      <div id="timeline"></div>
+      <div id="resultbox"></div>
+      <h3>Log</h3>
+      <div id="events"></div>
+    </section>
+
+    <section class="pane" id="p-tele">
+      <div class="chart"><div class="l"><span>Grip force vs cap (N)</span><span><b style="color:var(--cup)">cup</b> <b style="color:var(--tap)">tap</b> <span>dashed = cap</span></span></div><canvas id="c1"></canvas></div>
+      <div class="chart"><div class="l"><span>Hand speed (m/s)</span><span></span></div><canvas id="c2"></canvas></div>
+      <div class="chart"><div class="l"><span>Handle lift (deg)</span><span class="muted">flow above 26°</span></div><canvas id="c3"></canvas></div>
+      <div class="chart"><div class="l"><span>Residual force vs threshold (N)</span><span class="muted">dashed = threshold</span></div><canvas id="c4"></canvas></div>
+      <h3>Belief vs truth</h3>
+      <div class="kv mono" id="belief"></div>
+      <p class="muted" style="margin-top:8px">The controller never reads true poses. The <b style="color:#69e0f0">cyan</b> markers in the 3D view are what the robot believes, the <b style="color:#ffb06a">orange</b> ones are the truth (toggle “Belief”).</p>
+    </section>
+
+    <section class="pane" id="p-proof">
+      <h3>Monte Carlo (headless, randomized)</h3>
+      <div class="row"><label class="row muted">levels <input type="text" id="mcLevels" value="1,2,3,4,5" style="width:100px"></label><label class="row muted">trials <input type="number" id="mcTrials" value="50" min="2" max="200"></label><button class="btn" id="bMC">Run</button></div>
+      <div class="muted" id="mcProg" style="margin:6px 0"></div>
+      <table id="mcTable"><thead><tr><th>Level</th><th>Pass</th><th>Target</th><th>Time</th><th>Peak grip</th><th>Max tilt</th></tr></thead><tbody></tbody></table>
+      <div id="mcReasons" class="muted" style="margin-top:8px"></div>
+      <h3>1:1 with the real station</h3>
+      <div class="row"><button class="btn" id="bReplay">Replay real Level 1 waypoints</button><button class="btn" id="bEquiv">Cartesian vs replay</button></div>
+      <div id="proofOut" style="margin-top:var(--s1)"></div>
+    </section>
+
+    <section class="pane" id="p-dance">
+      <h3>Your songs</h3>
+      <div id="tracks"></div>
+      <div class="muted" id="anaStat" style="margin-bottom:8px"></div>
+      <audio id="aud" controls preload="auto" style="width:100%"></audio>
+      <div class="row" style="margin:var(--s1) 0">
+        <button class="btn primary" id="dStart">Start dance</button><button class="btn" id="dPlay">Play / pause</button><button class="btn danger" id="dStop">Stop</button>
+      </div>
+      <canvas id="beatviz" style="width:100%;height:84px;display:block;background:#10131b;border:1px solid var(--line);border-radius:8px"></canvas>
+      <h3>Sync</h3>
+      <div class="row"><label class="row muted" style="flex:1">nudge <input id="sync" type="range" min="-250" max="250" step="5" value="0" style="flex:1;accent-color:var(--acc)"> <b class="mono" id="syncv">0 ms</b></label></div>
+      <div class="muted" style="font-size:12px">The arms follow the audio clock, posed 200 ms ahead to cover the tracker lag and the display. If they look early or late on your speakers, nudge.</div>
+      <div class="card" style="margin-top:var(--s2)"><b>Use another file</b><div class="muted" style="font-size:12px;margin:4px 0">Played locally, never uploaded. It has no analysis, so set its tempo and tap the first beat.</div><input type="file" id="ownfile" accept="audio/*">
+        <div class="row" style="margin-top:6px"><label class="row muted">BPM <input type="number" id="bpm" value="120" step="0.1"></label><label class="row muted">downbeat s <input type="number" id="down" value="0" step="0.01"></label><button class="btn" id="dTap">Tap 8 beats</button><span class="muted" id="tapTxt"></span></div></div>
+      <div class="muted" id="danceStat" style="margin-top:var(--s1)"></div>
+    </section>
+  </aside>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const LEVELS = [
+  [1, "Upright cup in the coaster", "known position"], [2, "Nested stack, height known", "pin · wiggle · lay · flip"],
+  [3, "Nested stack, height unknown", "peck to count the cups"], [4, "Lever angle unknown", "feel for the handle"], [5, "Cup anywhere on the mat", "peck grid, then fit"],
+];
+let S = null, cfg = {level: 1, material: "paper"}, tab = "run";
+const post = (u, b) => fetch(u, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(b || {})}).then(r => r.json());
+
+/* ------------------------------------------------------------------ levels / controls */
+LEVELS.forEach(([n, t, s]) => {
+  const b = document.createElement("button"); b.dataset.l = n; b.innerHTML = `<b>${n}</b><div>${t}<br><span>${s}</span></div>`;
+  b.onclick = () => post("/api/reset", {level: n}); $("levels").appendChild(b);
+});
+document.querySelectorAll("#mat button").forEach(b => b.onclick = () => post("/api/reset", {material: b.dataset.m}));
+$("rand").onchange = () => post("/api/reset", {randomize: $("rand").checked});
+$("seed").onchange = () => post("/api/reset", {seed: +$("seed").value});
+$("bRun").onclick = () => post("/api/run"); $("bStep").onclick = () => post("/api/step"); $("bPause").onclick = () => post("/api/pause");
+$("bAbort").onclick = () => post("/api/abort"); $("bReset").onclick = () => post("/api/reset", {});
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  tab = b.dataset.tab; document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.id === "p-" + tab)); if (tab === "dance") danceStat();
+});
+const speedFrom = (v) => Math.pow(2, +v);
+$("speed").oninput = () => { const s = speedFrom($("speed").value); $("speedv").textContent = s.toFixed(2) + "×"; post("/api/speed", {speed: s}); };
+
+/* ------------------------------------------------------------------ camera, frames, websocket */
+const DEF = {az: -28, el: -34, dist: 1.55, lookat: [0.40, 0.0, 0.10]};
+const cam = {az: DEF.az, el: DEF.el, dist: DEF.dist, lookat: DEF.lookat.slice(), ortho: false, follow: false, overlay: false};
+let anim = null, lastSent = 0, dirty = true;
+const view = $("view"), vctx = view.getContext("2d");
+let ws = null, vw = 0, vh = 0, decoding = false, latest = null;
+function connect() {
+  ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws"); ws.binaryType = "blob";
+  ws.onopen = () => { sendView(); dirty = true; };
+  ws.onmessage = async (ev) => {
+    if (typeof ev.data === "string") { S = JSON.parse(ev.data); render(); return; }
+    if (decoding) { latest = ev.data; return; }                               // never queue frames: show the newest one
+    decoding = true; let blob = ev.data;
+    while (blob) { const bmp = await createImageBitmap(blob); latest = null;
+      if (view.width !== bmp.width || view.height !== bmp.height) { view.width = bmp.width; view.height = bmp.height; }
+      vctx.drawImage(bmp, 0, 0); bmp.close(); blob = latest; }
+    decoding = false;
+  };
+  ws.onclose = () => setTimeout(connect, 800);
+}
+function sendView() {
+  const r = $("stage").getBoundingClientRect(); const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({type: "view", w: Math.round(r.width), h: Math.round(r.height), dpr}));
+}
+let rsz; window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(sendView, 120); });
+function sendCam() {
+  const now = performance.now(); if (!dirty || now - lastSent < 30) return;
+  if (ws && ws.readyState === 1) { ws.send(JSON.stringify({type: "cam", az: cam.az, el: cam.el, dist: cam.dist, lookat: cam.lookat})); lastSent = now; dirty = false; }
+}
+const wrap = (a) => ((a + 540) % 360) - 180;
+function animateTo(t, ms = 300) {
+  const from = {az: cam.az, el: cam.el, dist: cam.dist, lookat: cam.lookat.slice()};
+  const to = {az: t.az ?? cam.az, el: t.el ?? cam.el, dist: t.dist ?? cam.dist, lookat: t.lookat ?? cam.lookat};
+  const da = wrap(to.az - from.az); anim = {t0: performance.now(), ms, from, to, da};
+}
+function tickAnim() {
+  if (anim) {
+    const k = Math.min((performance.now() - anim.t0) / anim.ms, 1), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    cam.az = anim.from.az + anim.da * e; cam.el = anim.from.el + (anim.to.el - anim.from.el) * e; cam.dist = anim.from.dist + (anim.to.dist - anim.from.dist) * e;
+    cam.lookat = anim.from.lookat.map((v, i) => v + (anim.to.lookat[i] - v) * e); dirty = true; if (k >= 1) anim = null;
+  }
+  sendCam(); drawCube(); requestAnimationFrame(tickAnim);
+}
+function pushFlags() { post("/api/camera", {ortho: cam.ortho, follow: cam.follow, overlay: cam.overlay}); }
+$("bFit").onclick = fit; $("bOrtho").onclick = toggleOrtho;
+$("bFollow").onclick = () => { cam.follow = !cam.follow; $("bFollow").classList.toggle("on", cam.follow); pushFlags(); };
+$("bOverlay").onclick = () => { cam.overlay = !cam.overlay; $("bOverlay").classList.toggle("on", cam.overlay); pushFlags(); };
+function fit() { cam.follow = false; $("bFollow").classList.remove("on"); pushFlags(); animateTo(DEF); }
+function toggleOrtho() { cam.ortho = !cam.ortho; $("bOrtho").classList.toggle("on", cam.ortho); pushFlags(); }
+window.addEventListener("keydown", (e) => {
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) return;
+  if (e.key === "f" || e.key === "F") fit(); else if (e.key === "o" || e.key === "O") toggleOrtho();
+  else if (e.key === " ") { e.preventDefault(); (S && S.mode === "RUNNING") ? post("/api/pause") : post("/api/run"); }
+});
+/* orbit / pan / zoom / double-click orbit point */
+let drag = null;
+view.addEventListener("mousedown", (e) => { anim = null; drag = {x: e.clientX, y: e.clientY, pan: e.shiftKey || e.button !== 0}; });
+window.addEventListener("mouseup", () => drag = null);
+window.addEventListener("mousemove", (e) => {
+  if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+  if (drag.pan) {
+    const a = cam.az * Math.PI / 180, k = cam.dist * 0.0011;
+    cam.lookat[0] += (Math.sin(a) * dx - Math.cos(a) * dy * Math.sin(Math.abs(cam.el * Math.PI / 180))) * k;
+    cam.lookat[1] += (-Math.cos(a) * dx - Math.sin(a) * dy * Math.sin(Math.abs(cam.el * Math.PI / 180))) * k;
+    cam.lookat[2] += dy * k * Math.cos(cam.el * Math.PI / 180) * 0.0;
+  } else { cam.az = wrap(cam.az - dx * 0.35); cam.el = Math.max(-89.5, Math.min(89.5, cam.el - dy * 0.35)); }
+  dirty = true;
+});
+view.addEventListener("wheel", (e) => { e.preventDefault(); cam.dist = Math.max(0.25, Math.min(5, cam.dist * Math.exp(e.deltaY * 0.0012))); dirty = true; }, {passive: false});
+view.addEventListener("contextmenu", (e) => e.preventDefault());
+view.addEventListener("dblclick", async (e) => {
+  const r = view.getBoundingClientRect(); const res = await post("/api/pick", {x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height});
+  if (res.point) animateTo({lookat: res.point});
+});
+
+/* ------------------------------------------------------------------ view cube (drawn by hand, hit-tested per 3x3 cell) */
+const cube = $("cube"), cx = cube.getContext("2d");
+function basis() {
+  const a = cam.az * Math.PI / 180, e = cam.el * Math.PI / 180;
+  const f = [Math.cos(e) * Math.cos(a), Math.cos(e) * Math.sin(a), Math.sin(e)];
+  let r = [f[1], -f[0], 0]; const n = Math.hypot(r[0], r[1]) || 1; r = r.map(v => v / n);
+  const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
+  return {f, r, u};
+}
+const FACES = [ // world normal, label, two in-plane axes
+  {n: [-1, 0, 0], t: "FRONT", a: [0, -1, 0], b: [0, 0, 1]}, {n: [1, 0, 0], t: "BACK", a: [0, 1, 0], b: [0, 0, 1]},
+  {n: [0, 1, 0], t: "LEFT", a: [-1, 0, 0], b: [0, 0, 1]}, {n: [0, -1, 0], t: "RIGHT", a: [1, 0, 0], b: [0, 0, 1]},
+  {n: [0, 0, 1], t: "TOP", a: [0, -1, 0], b: [1, 0, 0]}, {n: [0, 0, -1], t: "BOTTOM", a: [0, -1, 0], b: [-1, 0, 0]},
+];
+let cells = [], hover = null;
+function proj(v, B, S0) { const x = v[0] * B.r[0] + v[1] * B.r[1] + v[2] * B.r[2], y = v[0] * B.u[0] + v[1] * B.u[1] + v[2] * B.u[2], z = v[0] * B.f[0] + v[1] * B.f[1] + v[2] * B.f[2]; return [132 + x * S0, 132 - y * S0, z]; }
+function drawCube() {
+  const B = basis(), S0 = 62; cx.clearRect(0, 0, 264, 264); cells = [];
+  const faces = FACES.map(F => ({F, depth: F.n[0] * B.f[0] + F.n[1] * B.f[1] + F.n[2] * B.f[2]})).filter(o => o.depth < 0.02).sort((p, q) => q.depth - p.depth);
+  for (const {F} of faces) {
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) {
+      const c = F.n.map((v, k) => v + F.a[k] * i * 0.667 + F.b[k] * j * 0.667);
+      const quad = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([s, t]) => proj(c.map((v, k) => v + F.a[k] * s * 0.333 + F.b[k] * t * 0.333), B, S0));
+      const dir = F.n.map((v, k) => (Math.abs(i) ? F.a[k] * i : 0) + (Math.abs(j) ? F.b[k] * j : 0) + v);
+      cells.push({quad, dir, key: `${F.t}${i}${j}`});
+      cx.beginPath(); quad.forEach((p, k) => k ? cx.lineTo(p[0], p[1]) : cx.moveTo(p[0], p[1])); cx.closePath();
+      const center = (i === 0 && j === 0); const hv = hover === `${F.t}${i}${j}`;
+      cx.fillStyle = hv ? "#7c8cff" : (center ? "#2a3150" : "#1d2335"); cx.fill(); cx.strokeStyle = "#3b4466"; cx.lineWidth = 1.5; cx.stroke();
+    }
+    const o = proj(F.n, B, S0), pa = proj(F.n.map((v, k) => v + F.a[k]), B, S0), pb = proj(F.n.map((v, k) => v + F.b[k]), B, S0);
+    cx.save(); cx.setTransform((pa[0] - o[0]), (pa[1] - o[1]), (pb[0] - o[0]), (pb[1] - o[1]), o[0], o[1]);
+    cx.fillStyle = "#e7eaf1"; cx.font = "bold 0.30px sans-serif"; cx.textAlign = "center"; cx.textBaseline = "middle";
+    cx.transform(1, 0, 0, -1, 0, 0); cx.fillText(F.t, 0, 0); cx.restore();
+  }
+}
+function cubeHit(ev) {
+  const r = cube.getBoundingClientRect(), x = (ev.clientX - r.left) * 264 / r.width, y = (ev.clientY - r.top) * 264 / r.height;
+  for (let k = cells.length - 1; k >= 0; k--) { const q = cells[k].quad; let inside = false;
+    for (let i = 0, j = 3; i < 4; j = i++) if (((q[i][1] > y) !== (q[j][1] > y)) && (x < (q[j][0] - q[i][0]) * (y - q[i][1]) / (q[j][1] - q[i][1]) + q[i][0])) inside = !inside;
+    if (inside) return cells[k]; }
+  return null;
+}
+cube.addEventListener("mousemove", (e) => { const h = cubeHit(e); hover = h ? h.key : null; });
+cube.addEventListener("mouseleave", () => hover = null);
+cube.addEventListener("click", (e) => {
+  const h = cubeHit(e); if (!h) return; const v = h.dir, n = Math.hypot(...v);
+  const az = Math.atan2(v[1] / n, v[0] / n) * 180 / Math.PI + 180, el = -Math.asin(-v[2] / n) * 180 / Math.PI;
+  // camera sits on the side of the clicked cell: look along -v
+  const f = [-v[0] / n, -v[1] / n, -v[2] / n]; const a2 = Math.atan2(f[1], f[0]) * 180 / Math.PI, e2 = Math.asin(f[2]) * 180 / Math.PI;
+  animateTo({az: Math.hypot(f[0], f[1]) < 1e-3 ? cam.az : a2, el: Math.max(-89.5, Math.min(89.5, e2))});
+});
+let cdrag = null;
+cube.addEventListener("mousedown", (e) => { cdrag = {x: e.clientX, y: e.clientY, moved: false}; });
+window.addEventListener("mousemove", (e) => { if (!cdrag) return; const dx = e.clientX - cdrag.x, dy = e.clientY - cdrag.y; if (Math.abs(dx) + Math.abs(dy) > 3) cdrag.moved = true;
+  if (cdrag.moved) { cam.az = wrap(cam.az - dx * 0.8); cam.el = Math.max(-89.5, Math.min(89.5, cam.el - dy * 0.8)); cdrag.x = e.clientX; cdrag.y = e.clientY; dirty = true; } });
+window.addEventListener("mouseup", () => { setTimeout(() => cdrag = null, 0); });
+cube.addEventListener("click", (e) => { if (cdrag && cdrag.moved) { e.stopImmediatePropagation(); } }, true);
+
+/* ------------------------------------------------------------------ rendering the snapshot */
+const fmt = (v, d = 1) => (v == null ? "–" : (+v).toFixed(d));
+function render() {
+  if (!S) return;
+  $("mode").textContent = S.mode; $("mode").className = "badge " + S.mode;
+  $("clock").textContent = `t ${fmt(S.t, 1)} s`; $("perf").textContent = `${fmt(S.sim_rate, 1)}× · render ${fmt(S.frame_ms, 0)} ms`;
+  document.querySelectorAll("#levels button").forEach(b => b.classList.toggle("on", +b.dataset.l === S.cfg.level));
+  document.querySelectorAll("#mat button").forEach(b => b.classList.toggle("on", b.dataset.m === S.cfg.material));
+  if (document.activeElement !== $("seed")) $("seed").value = S.cfg.seed; $("rand").checked = !!S.cfg.randomize;
+  const run = S.mode === "RUNNING"; $("bRun").disabled = run || S.mode === "DONE" || S.mode === "FAULT" || S.mode === "DANCE"; $("bStep").disabled = run || ["DONE", "FAULT", "DANCE"].includes(S.mode);
+  $("bPause").disabled = !run;
+  const bn = $("banner"); if (S.fault) { bn.style.display = "block"; bn.textContent = S.fault; } else bn.style.display = "none";
+  $("hud").textContent = S.dance && S.dance.active ? `Dance · ${S.dance.song}${S.dance.blocked ? " · move held by the collision check" : ""}` : `${S.cfg.material} cup · level ${S.cfg.level}`;
+  // pour ring
+  const p = S.pour, frac = Math.min(p.flow_s / p.target_s, 1); $("ringArc").setAttribute("stroke-dasharray", `${(frac * 264).toFixed(1)} 264`);
+  $("ringArc").setAttribute("stroke", p.flowing ? "#4fb3ff" : (frac >= 1 ? "#4cd08a" : "#5b6785")); $("ringTxt").textContent = fmt(p.flow_s, 1);
+  $("pourBig").textContent = `Pour ${fmt(p.flow_s, 1)} / ${fmt(p.target_s, 1)} s`; $("pourSmall").textContent = `handle ${fmt(p.lever_deg, 0)}° · ${p.flowing ? "water flowing" : "closed"}`;
+  $("progressTxt").textContent = `${Math.round(S.progress * 100)}% of steps done`;
+  // timeline
+  const groups = {}; S.steps.forEach(s => (groups[s.group] = groups[s.group] || []).push(s));
+  let html = ""; for (const g of ["Pick", "Pour", "Serve"]) { if (!groups[g]) continue; html += `<div class="group"><div class="gh">${g}<i></i></div>`;
+    for (const s of groups[g]) { const txt = s.status === "waiting" ? s.check : (s.msg || s.check);
+      html += `<div class="step ${s.status} ${s.arm || "none"}" data-id="${s.id}"><span class="dot"></span><span class="t">${s.title.replace(/^(Cup|Tap) arm: /, "")}</span><span class="st">${s.status}${s.dur != null ? " · " + fmt(s.dur, 1) + " s" : ""}</span><span class="d">${txt || ""}</span></div>`; }
+    html += "</div>"; }
+  const tl = $("timeline"); if (tl.dataset.h !== html) { tl.innerHTML = html; tl.dataset.h = html; tl.querySelectorAll(".step").forEach(el => el.onclick = () => { if (!el.classList.contains("waiting")) post("/api/scrub", {id: el.dataset.id}); }); }
+  // result
+  const rb = $("resultbox"); if (S.result) { const c = S.result.checks || {}; rb.innerHTML = `<h3>${S.result.ok ? '<span class="ok">Passed</span>' : '<span class="bad">Did not pass</span>'}</h3><ul class="res">` + Object.entries(c).map(([k, v]) => `<li class="${v ? "" : "f"}">${k.replace(/_/g, " ")}</li>`).join("") + `</ul><div class="muted mono">cup ${fmt(S.result.coaster_offset_mm, 0)} mm from centre · tilt ${fmt(S.result.tilt_deg, 0)}° · flow ${fmt(S.result.flow_s, 2)} s</div>`; } else rb.innerHTML = "";
+  const ev = $("events"), atBottom = ev.scrollTop + ev.clientHeight >= ev.scrollHeight - 8; ev.innerHTML = S.events.map(([t, m]) => `<div><b class="mono">${fmt(t, 1)}</b> ${m}</div>`).join(""); if (atBottom) ev.scrollTop = ev.scrollHeight;
+  if (tab === "tele") drawCharts(); belief(); if (tab === "proof") proofs(); if (tab === "dance") danceStat();
+}
+/* ------------------------------------------------------------------ charts */
+function chart(id, series, opts = {}) {
+  const c = $(id), dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight; if (c.width !== w * dpr) { c.width = w * dpr; c.height = h * dpr; }
+  const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const t = S.telemetry.t; if (!t.length) return; const t1 = t[t.length - 1], t0 = Math.max(t1 - 10, t[0]);
+  let lo = opts.lo ?? 0, hi = opts.hi ?? 1; series.forEach(s => s.y.forEach(v => { hi = Math.max(hi, v * 1.1); lo = Math.min(lo, v); }));
+  const X = (tt) => 6 + (tt - t0) / Math.max(t1 - t0, 1e-3) * (w - 12), Y = (v) => h - 6 - (v - lo) / Math.max(hi - lo, 1e-6) * (h - 12);
+  g.strokeStyle = "#232a3a"; g.lineWidth = 1; for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(0, 6 + i * (h - 12) / 4); g.lineTo(w, 6 + i * (h - 12) / 4); g.stroke(); }
+  g.fillStyle = "#6c7590"; g.font = "10px ui-monospace"; g.fillText(hi.toFixed(hi < 2 ? 2 : 0), 8, 14); g.fillText(lo.toFixed(0), 8, h - 8);
+  series.forEach(s => { g.strokeStyle = s.color; g.lineWidth = s.dash ? 1.2 : 1.8; g.setLineDash(s.dash ? [5, 4] : []); g.beginPath();
+    s.y.forEach((v, i) => { const x = X(t[i]), y = Y(v); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); });
+  g.setLineDash([]);
+}
+function drawCharts() {
+  const T = S.telemetry, cupc = "#4fb3ff", tapc = "#ffb454";
+  chart("c1", [{y: T.cap_cup, color: cupc, dash: 1}, {y: T.cap_tap, color: tapc, dash: 1}, {y: T.grip_cup, color: cupc}, {y: T.grip_tap, color: tapc}], {hi: 10});
+  chart("c2", [{y: T.speed_cup, color: cupc}, {y: T.speed_tap, color: tapc}], {hi: 0.3});
+  chart("c3", [{y: T.lever, color: "#7c8cff"}], {hi: 70});
+  chart("c4", [{y: T.resid_thr, color: "#ff6b6b", dash: 1}, {y: T.resid, color: "#4cd08a"}], {hi: 2});
+}
+function belief() {
+  const b = S.beliefs; $("belief").innerHTML = `<span>cup (believed)</span><span>${b.cup ? b.cup.join(", ") : "–"}</span><span>cup (true)</span><span>${b.true_cup.join(", ")}</span><span>handle (believed)</span><span>${b.lever_yaw}°</span><span>handle (true)</span><span>${b.true_lever_yaw}°</span>`;
+}
+/* ------------------------------------------------------------------ proofs */
+$("bMC").onclick = () => post("/api/montecarlo", {levels: $("mcLevels").value.split(",").map(x => +x.trim()).filter(Boolean), trials: +$("mcTrials").value});
+$("bReplay").onclick = () => post("/api/proof/replay"); $("bEquiv").onclick = () => post("/api/proof/equivalence");
+function proofs() {
+  $("mcProg").textContent = S.mc.running ? S.mc.progress : (S.mc.progress || "");
+  const rows = Object.entries(S.mc.results || {}).map(([l, r]) => `<tr><td>${l}</td><td class="${r.meets_target ? "ok" : "bad"}">${r.passed}/${r.trials} (${Math.round(r.success_rate * 100)}%)</td><td>${Math.round(r.target * 100)}%</td><td>${fmt(r.sim_time_mean_s, 0)} s</td><td>${fmt(r.peak_grip_n_max, 0)} N</td><td>${fmt(r.max_tilt_deg_max, 0)}°</td></tr>`).join("");
+  $("mcTable").tBodies[0].innerHTML = rows;
+  $("mcReasons").innerHTML = Object.entries(S.mc.results || {}).map(([l, r]) => `<div><b>L${l}</b> ` + r.failure_reasons.map(([m, n]) => `${n}× ${m}`).join(" · ") + "</div>").join("");
+  const P = S.proof, o = $("proofOut"); if (P.running) { o.innerHTML = `<span class="muted">running ${P.kind}…</span>`; return; } const r = P.result; if (!r) { o.innerHTML = ""; return; }
+  if (r.error) { o.innerHTML = `<span class="bad">${r.error}</span>`; return; }
+  if (r.kind === "replay_l1") o.innerHTML = `<div class="${r.ok ? "ok" : "bad"}"><b>${r.ok ? "Replay passes" : "Replay fails"}</b></div><div class="kv mono"><span>cup lifted out</span><span>${r.lifted_out_of_coaster}</span><span>under the outlet</span><span>${fmt(r.under_outlet_mm, 1)} mm (≤ 5)</span><span>back in coaster</span><span>${fmt(r.returned_to_coaster_mm, 1)} mm</span><span>max tilt</span><span>${fmt(r.max_tilt_deg, 1)}°</span></div>`;
+  else o.innerHTML = `<div class="${r.ok ? "ok" : "bad"}"><b>${r.ok ? "IK reproduces every real pose" : "IK mismatch"}</b></div><table><tr><th>waypoint</th><th>pos mm</th><th>ori °</th></tr>${r.ik_rows.map(x => `<tr><td>${x.waypoint}</td><td>${x.pos_mm}</td><td>${x.ori_deg}</td></tr>`).join("")}</table><div class="muted" style="margin-top:6px">Skill poses vs real: ${r.skill_rows.map(x => `${x.moment}: ${x.pos_mm} mm, ${x.ori_deg}°`).join(" · ")}</div>`;
+}
+/* ------------------------------------------------------------------ dance mode */
+let song = "rick", custom = false, tapTimes = [], grids = JSON.parse(localStorage.getItem("grids") || "{}"), syncMs = 0;
+function tracksUI() {
+  if (!S || !S.tracks) return; const key = JSON.stringify(S.tracks.map(t => [t.id, t.bpm]));
+  if ($("tracks").dataset.k !== key) { $("tracks").dataset.k = key;
+    $("tracks").innerHTML = S.tracks.map(t => `<div class="card track ${t.id === song && !custom ? "on" : ""}" data-id="${t.id}"><div><b>${t.title}</b><span>${t.artist} · ${t.bpm ? t.bpm + " BPM · " + t.beats + " beats tracked" : "analysing…"}</span></div></div>`).join("");
+    $("tracks").querySelectorAll(".track").forEach(el => el.onclick = () => pickTrack(el.dataset.id)); if (!$("aud").src) pickTrack(song); }
+  $("anaStat").textContent = S.analysis && !S.analysis.ready ? `analysing ${S.analysis.working || ""}…` : (S.analysis && S.analysis.error ? S.analysis.error : "beats tracked from the audio itself");
+}
+function pickTrack(id) {
+  song = id; custom = false; document.querySelectorAll(".track").forEach(e => e.classList.toggle("on", e.dataset.id === id));
+  const t = S.tracks.find(x => x.id === id); $("aud").src = t.url;
+}
+$("ownfile").onchange = (e) => { const f = e.target.files[0]; if (!f) return; $("aud").src = URL.createObjectURL(f); song = "custom"; custom = true; document.querySelectorAll(".track").forEach(x => x.classList.remove("on"));
+  const g = grids.custom || {}; $("bpm").value = g.bpm ?? 120; $("down").value = g.downbeat_s ?? 0; };
+function saveGrid() { const bpm = +$("bpm").value, down = +$("down").value; grids.custom = {bpm, downbeat_s: down}; localStorage.setItem("grids", JSON.stringify(grids)); post("/api/dance/grid", {song: "custom", bpm, downbeat_s: down}); }
+$("bpm").onchange = $("down").onchange = saveGrid;
+$("sync").oninput = () => { syncMs = +$("sync").value; $("syncv").textContent = `${syncMs} ms`; };
+$("dStart").onclick = async () => { if (custom) saveGrid(); await post("/api/dance/start", {song}); $("aud").currentTime = 0; try { await $("aud").play(); } catch (e) { $("danceStat").textContent = "the browser blocked autoplay: press play on the audio bar"; } };
+$("dStop").onclick = () => { post("/api/dance/stop"); $("aud").pause(); };
+$("dPlay").onclick = () => { $("aud").paused ? $("aud").play() : $("aud").pause(); };
+$("dTap").onclick = () => {
+  tapTimes.push($("aud").currentTime); if (tapTimes.length > 8) tapTimes = tapTimes.slice(-8);
+  if (tapTimes.length === 8) { const per = 60 / (+$("bpm").value); let sx = 0, sy = 0; tapTimes.forEach(t => { const ph = ((t % per) / per) * 2 * Math.PI; sx += Math.cos(ph); sy += Math.sin(ph); });
+    const ph = (Math.atan2(sy, sx) + 2 * Math.PI) % (2 * Math.PI); $("down").value = ((ph / (2 * Math.PI)) * per).toFixed(3); saveGrid(); $("tapTxt").textContent = "downbeat set"; tapTimes = []; }
+  else $("tapTxt").textContent = `${tapTimes.length}/8`;
+};
+setInterval(() => { if (S && S.dance && S.dance.active && ws && ws.readyState === 1) ws.send(JSON.stringify({type: "dance", song, t: $("aud").currentTime, playing: !$("aud").paused, sync_ms: syncMs})); }, 50);
+function beatViz() {
+  const c = $("beatviz"), dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight; if (!w) return; if (c.width !== w * dpr) { c.width = w * dpr; c.height = h * dpr; }
+  const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h); const d = S.dance, info = d.info || {};
+  for (let i = 0; i < 4; i++) { const on = d.active && d.playing && Math.floor(info.beat || 0) === i, f = (info.beat || 0) % 1; g.beginPath(); g.arc(30 + i * 52, 30, on ? 14 - 5 * f : 9, 0, 6.3); g.fillStyle = on ? (i === 0 ? "#7c8cff" : "#4cd08a") : "#2a3150"; g.fill(); }
+  g.fillStyle = "#e7eaf1"; g.font = "600 13px sans-serif"; g.fillText(d.active ? `move: ${info.move || "-"}   bar ${info.bar ?? "-"}` : "not dancing", 8, 66);
+  g.fillStyle = "#2a3150"; g.fillRect(w - 110, 22, 96, 8); g.fillStyle = "#ffb454"; g.fillRect(w - 110, 22, 96 * (info.energy || 0), 8); g.fillStyle = "#8a93a8"; g.font = "11px sans-serif"; g.fillText("song energy", w - 110, 46);
+}
+function danceStat() { if (!S) return; tracksUI(); beatViz(); const d = S.dance; if (d.active) $("danceStat").textContent = `dancing · ${d.phase}${d.playing ? "" : " · waiting for the music"}${d.blocked ? " · a move was held back by the collision check" : ""}`; else $("danceStat").textContent = "not dancing: the robots are in the task twin"; }
+
+/* ------------------------------------------------------------------ boot */
+connect(); requestAnimationFrame(tickAnim); setTimeout(sendView, 300);
+fetch("/api/state").then(r => r.json()).then(s => { S = s; Object.assign(cam, {az: s.cam.az, el: s.cam.el, dist: s.cam.dist, lookat: s.cam.lookat.slice()}); render(); tracksUI(); });
+</script>
+</body>
+</html>

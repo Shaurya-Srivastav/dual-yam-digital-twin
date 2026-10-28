@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+MUJOCO_LOG.TXT
+# user-provided music is analysed locally and never committed
+sim_station/assets/*.mp3
+sim_station/assets/analysis_cache.json
+sim_station/dance_grids.json
+# real-robot session log (contains network credentials) and station photos
+cursor_raspberry_pi_cup_pouring_setup.md
+setup/
+third_party/
+tracking_report.json

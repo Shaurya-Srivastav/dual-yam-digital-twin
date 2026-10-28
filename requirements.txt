@@ -1,0 +1,12 @@
+mujoco>=3.1
+numpy
+scipy
+pillow
+fastapi
+uvicorn
+websockets
+pydantic
+mink
+qpsolvers[quadprog]
+dm-env
+# beat tracking decodes the songs with ffmpeg (brew install ffmpeg)
