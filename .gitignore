@@ -10,3 +10,6 @@ cursor_raspberry_pi_cup_pouring_setup.md
 setup/
 third_party/
 tracking_report.json
+
+# Local Netlify folder
+.netlify
