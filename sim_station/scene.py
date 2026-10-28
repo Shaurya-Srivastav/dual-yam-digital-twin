@@ -1,4 +1,4 @@
-"""MuJoCo digital twin of the Everest dual-YAM water-cup station.
+"""MuJoCo digital twin of the dual-YAM water-cup station.
 
 Every measured number comes from `layout.py`. This module only turns those numbers
 into an MJCF model:

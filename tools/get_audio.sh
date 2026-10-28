@@ -4,7 +4,7 @@
 set -e
 cd "$(dirname "$0")/.."
 tmp=$(mktemp -d)
-git clone --depth 1 https://github.com/Shaurya-Srivastav/everest-dual-yam-twin-audio "$tmp"
+git clone --depth 1 https://github.com/Shaurya-Srivastav/dual-yam-digital-twin-audio "$tmp"
 cp "$tmp"/*.mp3 sim_station/assets/
 rm -rf "$tmp"
 echo "songs copied to sim_station/assets/"

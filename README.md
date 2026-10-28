@@ -1,10 +1,12 @@
-# Everest dual-YAM digital twin
+# Dual-YAM digital twin
 
 A MuJoCo digital twin of a two-arm (I2RT YAM) water-cup station: pick a paper or plastic cup, hold it under a dry dispenser spout, let the second arm open the lever for a 7 s pour, and serve the cup into a coaster. Five levels of increasing uncertainty, all driven by one set of skills that only read what real motors would report (joint position, velocity, torque, gripper width and effort).
 
-![level 1](site/demo_level1.gif)
+[![Dual-YAM digital twin: Level 1](https://img.shields.io/badge/project%20page-live-7c8cff)](https://dual-yam-digital-twin.netlify.app) ![license](https://img.shields.io/badge/license-MIT-4cd08a) ![sim](https://img.shields.io/badge/simulation%20only-no%20hardware%20run-f2c14e)
 
-Project page: https://everest-dual-yam-twin.netlify.app
+Videos of all five levels and of the dance mode are on the [project page](https://dual-yam-digital-twin.netlify.app); `tools/make_videos.py` regenerates them from the physics.
+
+Project page: https://dual-yam-digital-twin.netlify.app
 
 ## What is in here
 
@@ -24,7 +26,7 @@ Project page: https://everest-dual-yam-twin.netlify.app
 ## Run it
 
 ```bash
-git clone https://github.com/Shaurya-Srivastav/everest-dual-yam-twin && cd everest-dual-yam-twin
+git clone https://github.com/Shaurya-Srivastav/dual-yam-digital-twin && cd dual-yam-digital-twin
 git clone https://github.com/i2rt-robotics/i2rt third_party/i2rt     # arm and gripper models (or set I2RT_PATH)
 pip install -r requirements.txt            # Python 3.11, macOS or Linux; ffmpeg needed for Dance Mode
 ./run_sim.sh                               # http://127.0.0.1:8090
@@ -58,3 +60,16 @@ See [docs/RESULTS.md](docs/RESULTS.md). Short version: the nominal (no randomiza
 - [docs/RESEARCH.md](docs/RESEARCH.md): the literature behind the search and flip methods
 
 The twin does not use cameras anywhere. Skills never read true object poses; only the referee (`runner.check_pass`) and the debug overlay do.
+
+## Repository layout
+
+```
+sim_station/      the twin (see the table above)
+tools/            make_videos.py (project-page videos), get_audio.sh
+site/             static project page deployed to Netlify (index.html + videos/)
+docs/             ARCHITECTURE, RESULTS, RESEARCH, ROADMAP
+```
+
+## Contributing
+
+Run `python -m sim_station.selftest` before opening a pull request; it must keep the real-data replay and the IK equivalence passing. Anything that changes behaviour should come with a before/after Monte Carlo (`python -m sim_station.evaluate`) in the description.

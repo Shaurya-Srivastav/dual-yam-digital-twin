@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from sim_station.station import Station
 
 STATIC = Path(__file__).resolve().parent / "static"
-app = FastAPI(title="Everest dual-YAM twin")
+app = FastAPI(title="Dual-YAM digital twin")
 station: Optional[Station] = None
 
 

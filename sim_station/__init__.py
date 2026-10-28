@@ -1,4 +1,4 @@
-"""Digital twin of the Everest dual-YAM water-cup station (MuJoCo)."""
+"""Digital twin of the dual-YAM water-cup station (MuJoCo)."""
 
 import os
 import sys

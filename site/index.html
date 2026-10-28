@@ -1,47 +1,173 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Everest dual-YAM digital twin</title>
-<meta name="description" content="A MuJoCo digital twin of a two-arm water-cup station: blind, contact-driven skills, real-data replay, Monte Carlo evaluation.">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dual-YAM digital twin</title>
+<meta name="description" content="A MuJoCo digital twin of a two-arm water-cup station. Blind, contact-driven skills, five levels, real-data replay, Monte Carlo evaluation and a beat-synced dance mode.">
+<meta property="og:title" content="Dual-YAM digital twin">
+<meta property="og:description" content="Two robot arms, one dry dispenser, five levels of uncertainty, no cameras.">
 <style>
-:root{--bg:#0e1015;--panel:#151922;--line:#262d3d;--text:#e7eaf1;--muted:#8a93a8;--acc:#7c8cff;--cup:#4fb3ff;--tap:#ffb454;--ok:#4cd08a;--bad:#ff6b6b}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif}
-main{max-width:980px;margin:0 auto;padding:40px 20px 80px}h1{font-size:34px;margin:0 0 8px}h2{margin:48px 0 12px;font-size:22px}
-p,li{color:#c9cfdd}.muted{color:var(--muted)}a{color:var(--acc)}code{background:var(--panel);border:1px solid var(--line);padding:1px 6px;border-radius:6px;font-size:14px}
-pre{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto;font-size:14px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
-.card img{width:100%;border-radius:8px;display:block;margin-bottom:8px}table{width:100%;border-collapse:collapse}th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-weight:500}
-.bad{color:var(--bad)}.ok{color:var(--ok)}.btn{display:inline-block;background:var(--acc);color:#0b0d18;padding:9px 16px;border-radius:9px;font-weight:600;text-decoration:none;margin-right:8px}
-</style></head><body><main>
-<h1>Everest dual-YAM digital twin</h1>
-<p class="muted">Two I2RT YAM arms, a water dispenser with a 360° lever, paper and plastic cups. One cup in, a 7-second pour, one cup out, with skills that only feel what real motors report.</p>
-<p><a class="btn" href="https://github.com/Shaurya-Srivastav/everest-dual-yam-twin">Code on GitHub</a><a class="btn" style="background:var(--panel);color:var(--text);border:1px solid var(--line)" href="https://github.com/Shaurya-Srivastav/everest-dual-yam-twin#run-it">Run it locally</a></p>
+:root{--bg:#0b0d12;--panel:#12161f;--panel2:#171c28;--line:#252c3c;--text:#e8ebf2;--muted:#8d96ab;--acc:#7c8cff;--cup:#4fb3ff;--tap:#ffb454;--ok:#4cd08a;--warn:#f2c14e;--bad:#ff6b6b;--r:14px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#1a2140 0,transparent 60%),var(--bg);color:var(--text);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif}
+a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
+nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);background:rgba(11,13,18,.78);border-bottom:1px solid var(--line)}
+nav div{max-width:1120px;margin:0 auto;padding:12px 20px;display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+nav b{margin-right:auto}nav a{color:var(--muted);font-size:14px}nav a:hover{color:var(--text);text-decoration:none}
+section{max-width:1120px;margin:0 auto;padding:72px 20px 0}
+h1{font-size:clamp(34px,6vw,60px);line-height:1.08;margin:0 0 16px;letter-spacing:-.02em}
+h2{font-size:30px;margin:0 0 8px;letter-spacing:-.01em}h3{margin:0 0 6px;font-size:18px}
+.lead{font-size:19px;color:#c3cadb;max-width:760px}.muted{color:var(--muted)}.small{font-size:14px}
+.btn{display:inline-block;padding:10px 18px;border-radius:10px;font-weight:600;margin:6px 10px 0 0;border:1px solid var(--line);background:var(--panel2);color:var(--text)}
+.btn.p{background:var(--acc);border-color:var(--acc);color:#0b0d18}.btn:hover{text-decoration:none;filter:brightness(1.12)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.chip{padding:3px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:13px;color:#c3cadb}
+.grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));margin-top:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;transition:transform .15s,border-color .15s}
+.card:hover{transform:translateY(-2px);border-color:#3a4566}
+.vid{position:relative;cursor:pointer;background:#000;aspect-ratio:16/9}.vid video{width:100%;height:100%;display:block;object-fit:cover}
+.vid .play{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(transparent 55%,rgba(0,0,0,.55))}
+.vid .play span{width:58px;height:58px;border-radius:50%;background:rgba(124,140,255,.92);display:grid;place-items:center;font-size:22px;color:#0b0d18;padding-left:4px}
+.card .body{padding:14px 16px 16px}.tag{display:inline-block;font-size:12px;padding:2px 9px;border-radius:999px;margin-right:6px;font-weight:600}
+.tag.ok{background:rgba(76,208,138,.14);color:var(--ok)}.tag.warn{background:rgba(242,193,78,.14);color:var(--warn)}.tag.bad{background:rgba(255,107,106,.14);color:var(--bad)}
+dialog{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:16px;padding:0;width:min(1100px,94vw)}
+dialog::backdrop{background:rgba(5,6,10,.82);backdrop-filter:blur(4px)}
+dialog video{width:100%;display:block;background:#000;border-radius:16px 16px 0 0}
+dialog .cap{padding:14px 18px 18px}dialog button{float:right;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 14px;cursor:pointer}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:22px}
+.flow div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;position:relative}
+.flow div b{display:block;color:var(--acc);font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.cols{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));margin-top:22px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+table{width:100%;border-collapse:collapse;font-size:15px}th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted);font-weight:500;font-size:13px}
+.bar{height:8px;border-radius:5px;background:#222a3b;overflow:hidden;min-width:90px}.bar i{display:block;height:100%}
+ul{padding-left:20px;margin:8px 0}li{margin:4px 0;color:#c3cadb}code{background:var(--panel2);border:1px solid var(--line);padding:1px 6px;border-radius:6px;font-size:13.5px}
+pre{background:#0d1017;border:1px solid var(--line);border-radius:12px;padding:16px;overflow:auto;font-size:13.5px;line-height:1.55}
+footer{max-width:1120px;margin:80px auto 0;padding:24px 20px 60px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+.k{color:var(--ok)}.w{color:var(--warn)}.b{color:var(--bad)}
+</style>
+</head>
+<body>
+<nav><div><b>Dual-YAM digital twin</b><a href="#levels">Levels</a><a href="#dance">Dance</a><a href="#how">How it works</a><a href="#status">Honest status</a><a href="#proof">Proofs</a><a href="#run">Run it</a><a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">GitHub</a></div></nav>
 
-<h2>Rendered from the live physics</h2>
-<div class="grid">
-<div class="card"><img src="demo_level1.gif" alt="Level 1" loading="lazy"><b>Level 1</b><div class="muted">Cup from the coaster, under the spout, lever lifted for 7 s, back into the coaster.</div></div>
-<div class="card"><img src="demo_level2.gif" alt="Level 2" loading="lazy"><b>Level 2</b><div class="muted">Pin the stack, wiggle the top cup free, flip it with one wrist roll, serve.</div></div>
-<div class="card"><img src="demo_level4.gif" alt="Level 4" loading="lazy"><b>Level 4</b><div class="muted">The lever angle is unknown: feel for it, park it, touch again to confirm.</div></div>
-</div>
+<section style="padding-top:64px">
+  <h1>Two arms. One dry dispenser.<br><span style="color:var(--acc)">No cameras.</span></h1>
+  <p class="lead">A MuJoCo digital twin of a two-arm (I2RT YAM) water-cup station. One arm brings a paper or plastic cup under the spout, the other lifts a 360° lever for a 7-second pour, and the cup is served into a coaster. Every skill works from what real motors report: joint position, velocity, torque and gripper width.</p>
+  <a class="btn p" href="#levels">Watch the five levels</a><a class="btn" href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">Source code</a><a class="btn" href="#run">Run the live dashboard</a>
+  <div class="chips"><span class="chip">MuJoCo 3</span><span class="chip">MIT-mode PD + gravity feed-forward</span><span class="chip">torque-residual contact sensing</span><span class="chip">mink IK</span><span class="chip">set-membership cup localisation</span><span class="chip">beat tracking</span><span class="chip">Monte Carlo referee</span></div>
+</section>
 
-<h2>How it works</h2>
-<ul>
-<li><b>Blind skills.</b> No cameras and no true poses: joint encoders, motor torque, gripper width and effort. Contact is the torque residual after the controller's own gravity and friction model.</li>
-<li><b>Handle search.</b> A fingertip circles the valve and stops at ~0.9 N, below the ~1.5 N the swivel needs to turn; the handle's yaw comes from the known hand and handle shapes, then it is parked and touched again.</li>
-<li><b>Cup search.</b> Pecks from above; every outcome rules out cup positions that would contradict it (3-6 mm fit).</li>
-<li><b>One-arm flip.</b> Hand turned 60° off the arm's line and tilted 20° down: joint 6 alone rolls the held cup 180° with the hand fixed.</li>
-<li><b>Real-data replay.</b> The taught Level 1 waypoints from the physical robot, played through the simulated control loop, put the cup <b>0.9 mm</b> from the outlet axis and back in the coaster.</li>
-</ul>
+<section id="levels">
+  <h2>The five levels</h2>
+  <p class="muted">Rendered straight from the simulation, captions are the executor's own step names. Click a video to open it full size with controls.</p>
+  <div class="grid" id="levelGrid"></div>
+</section>
 
-<h2>Honest status</h2>
-<table><tr><th>Level</th><th>Randomized trials passed</th><th>Target</th></tr>
-<tr><td>1 upright cup</td><td class="bad">79 %</td><td>98 %</td></tr><tr><td>2 stack, height known</td><td class="bad">38 %</td><td>98 %</td></tr>
-<tr><td>3 stack, height unknown</td><td class="bad">21 %</td><td>95 %</td></tr><tr><td>4 lever angle unknown</td><td class="bad">25 %</td><td>95 %</td></tr>
-<tr><td>5 cup anywhere</td><td class="bad">33 %</td><td>90 %</td></tr></table>
-<p class="muted">24 trials per level with randomized positions, friction, mass, gains, base calibration, sensor noise and delay. Nominal runs of Levels 1 and 4 pass the full referee; Levels 2, 3 and 5 finish the task but still brush the remaining stack or target cup with the arm housing. Simulation only: nothing has run on the real arms. Details in <a href="https://github.com/Shaurya-Srivastav/everest-dual-yam-twin/blob/main/docs/RESULTS.md">docs/RESULTS.md</a>.</p>
+<section id="dance">
+  <h2>Dance mode</h2>
+  <p class="lead" style="font-size:17px">The browser plays a song and reports its clock; the server tracks the beats of the audio itself (tempo, beats, downbeats, loudness) and poses both arms from phase-locked moves: sway, pump, wave, circle, point and clap, sized by the song's energy. These clips are <b>silent</b> because the recordings are copyrighted; the dots show the tracked beat. Run the dashboard locally with your own files to hear it.</p>
+  <div class="grid" id="danceGrid"></div>
+</section>
 
-<h2>The live dashboard</h2>
-<p>The interactive twin (30-50 fps view with a view cube, step timeline with scrub, telemetry, Monte Carlo and a beat-synced Dance Mode) needs a Python process running MuJoCo, which a static host like Netlify cannot run. Start it locally:</p>
-<pre>git clone https://github.com/Shaurya-Srivastav/everest-dual-yam-twin
-git clone https://github.com/i2rt-robotics/i2rt everest-dual-yam-twin/third_party/i2rt
-cd everest-dual-yam-twin && pip install -r requirements.txt && ./run_sim.sh   # http://127.0.0.1:8090</pre>
-</main></body></html>
+<section id="how">
+  <h2>How it works</h2>
+  <div class="flow">
+    <div><b>1 · Plant</b>1 kHz MuJoCo, MIT-style law τ = kp(q*−q) + kd(q̇*−q̇) + gravity. Friction, mass, gains, base pose, sensor noise and delay are randomized per trial; power-up calibration fits the gravity feed-forward from position sag.</div>
+    <div><b>2 · Sense</b>Contact is the torque residual after the controller's own gravity and friction model, mapped to a Cartesian force with −pinv(Jᵀ). Guards use force steps, never a true contact flag.</div>
+    <div><b>3 · Plan</b>Strict mink IK, min-jerk synchronized trajectories, Cartesian lines for the last centimetres, collision checks against the bench, the dispenser and the other arm.</div>
+    <div><b>4 · Skills</b>Generators, one yield per 2 ms tick: side grasp, spout insertion, lever routine, coaster place, pecks, handle search, one-arm flip. Failures are loud.</div>
+    <div><b>5 · Levels</b>A dependency graph over two arm lanes. The tap arm moves to the lever while the cup is still being carried.</div>
+    <div><b>6 · Referee</b>Only the referee reads true poses: upright, centred, 7.0 s pour with the cup under the outlet, dispenser still, no collisions, arms at rest.</div>
+  </div>
+  <div class="cols">
+    <div class="panel"><h3>Finding the lever without moving it</h3><p class="small muted">Research on contact-pause grasping and proprioceptive articulated-object estimation says: set the threshold above noise but below breakaway.</p>
+      <ul class="small"><li>A fingertip circles the valve and stops at about 0.9 N; the swivel needs about 1.5 N to turn.</li><li>The handle yaw is solved from the known hand and handle shapes (oriented-box intersection), not a fixed offset.</li><li>The finger pushes it to about 45°, backs off and touches again to confirm; if it is lost it searches again.</li><li>The swivel turns a full 360°; tested from −170° to 175°.</li></ul></div>
+    <div class="panel"><h3>Finding the cup without cameras</h3><p class="small muted">Touch-only localisation keeps a belief and updates it from contact and no-contact readings.</p>
+      <ul class="small"><li>Pecks from above on a coarse grid until something stands up.</li><li>Every peck outcome rules out cup positions that would contradict it, using the arm and cup models: a set-membership fit, 3–6 mm error.</li><li>Not yet: choosing each next peck by expected information gain.</li></ul></div>
+    <div class="panel"><h3>The one-arm flip</h3><p class="small muted">With the hand 60° off the arm's line and tilted 20° down, the wrist is aligned so joint 6 alone rolls about 180° with the hand fixed.</p>
+      <ul class="small"><li>The cup is held by its base band with its axis perpendicular to the approach axis, so one wrist roll turns it over.</li><li>Found by an IK search over attitudes; pitching in place is not reachable.</li><li>The cup is then lowered until its base edge touches the mat and released.</li></ul></div>
+    <div class="panel"><h3>Side grasp that does not push the cup</h3><ul class="small"><li>Slides in with open jaws and complies sideways to contact force so the funnel pads centre the hand.</li><li>On closing, the stall width gives the chord 2·√(r²−s²): how far off the cup's axis the hand is, so depth is servoed from touch alone.</li><li>Force caps per grip; no weld, no snap.</li></ul></div>
+  </div>
+</section>
+
+<section id="status">
+  <h2>Honest status</h2>
+  <p class="muted">Simulation only; nothing has run on the real arms. Randomized trials vary positions ±1 cm, friction and mass ±25–30 %, gains ±10 %, base pose, sensor noise and delay.</p>
+  <div class="cols">
+    <div class="panel"><h3>Randomized success (24 trials per level)</h3>
+      <table><tr><th>Level</th><th>Passed</th><th>Target</th><th></th></tr>
+        <tr><td>1 Upright cup</td><td class="b">79 %</td><td>98 %</td><td><div class="bar"><i style="width:79%;background:var(--warn)"></i></div></td></tr>
+        <tr><td>2 Stack, height known</td><td class="b">38 %</td><td>98 %</td><td><div class="bar"><i style="width:38%;background:var(--bad)"></i></div></td></tr>
+        <tr><td>3 Stack, height unknown</td><td class="b">21 %</td><td>95 %</td><td><div class="bar"><i style="width:21%;background:var(--bad)"></i></div></td></tr>
+        <tr><td>4 Lever angle unknown</td><td class="b">25 %</td><td>95 %</td><td><div class="bar"><i style="width:25%;background:var(--bad)"></i></div></td></tr>
+        <tr><td>5 Cup anywhere</td><td class="b">33 %</td><td>90 %</td><td><div class="bar"><i style="width:33%;background:var(--bad)"></i></div></td></tr></table>
+      <p class="small muted">Measured before the last Level 5 and coaster changes; not rerun since.</p></div>
+    <div class="panel"><h3>Nominal runs (no randomization)</h3>
+      <table><tr><th>Level</th><th>Result</th></tr>
+        <tr><td>1</td><td><span class="tag ok">passes every referee check</span></td></tr><tr><td>4</td><td><span class="tag ok">passes every referee check</span></td></tr>
+        <tr><td>2, 3</td><td><span class="tag warn">pour and serve complete; the forearm or housing brushes the remaining stack</span></td></tr>
+        <tr><td>5</td><td><span class="tag warn">completes; the housing touches the target cup while pecking</span></td></tr></table>
+      <p class="small muted">Referee rule: no arm link or housing may touch a cup or stack; only fingertips may.</p></div>
+  </div>
+  <div class="panel" style="margin-top:18px"><h3>What is still open, and why</h3>
+    <ul>
+      <li><b class="b">Stack contact in Levels 2 and 3.</b> The remaining stack sits 11 cm from the line between the cup arm's base and the spout, so every carry to the spout brushes it. Making it a hard planning obstacle leaves no route. Moving the stack to the coaster spot needs the tap arm's base moved to the measured solution; I tried it and the lever lift then fails inverse kinematics, because the lever routine was tuned for the current base. Fix: re-tune the lever arc for the new base.</li>
+      <li><b class="b">Randomized success below target.</b> Top cup slips during the pull on some draws; some stack heights have no reachable side grasp; the held cup can bump the valve; the coaster dish is wide enough for the real 2 cm slack so it no longer centres the cup.</li>
+      <li><b class="w">Level 5 speed and housing contacts.</b> About 100–150 s of simulated time. The tilted hand's housing can touch the target cup while pecking.</li>
+      <li><b class="w">Dimensions not measured on the real station:</b> tap-arm base position, coaster dish radius, spigot geometry. The station photos were not used to calibrate this round.</li>
+      <li><b class="w">No hardware run.</b> <code>SimYam</code> implements the i2rt <code>Robot</code> protocol and the same driver can target <code>get_yam_robot</code>, but it is untested on the arms.</li>
+    </ul></div>
+</section>
+
+<section id="proof">
+  <h2>Proofs it matches the real station</h2>
+  <div class="cols">
+    <div class="panel"><h3>Real-data replay</h3><p>The taught Level 1 waypoints recorded on the physical robot, played through the simulated control loop: the cup comes out of the coaster, goes under the outlet and returns.</p>
+      <table><tr><td>Cup to outlet axis</td><td class="k"><b>0.9 mm</b> (limit 5 mm)</td></tr><tr><td>Back in coaster</td><td>8.9 mm from centre</td></tr><tr><td>Max tilt in hand</td><td>6.9°</td></tr></table></div>
+    <div class="panel"><h3>IK equivalence</h3><p>For all 12 taught Level 1 poses, strict Cartesian IK from unrelated seeds reproduces the real hand pose: <b class="k">≤ 0.4 mm and 0.01°</b>, so the skills use Cartesian goals, not cloned joint angles.</p></div>
+    <div class="panel"><h3>Monte Carlo referee</h3><p>Headless runs per level with a failure histogram, success rate, time, peak grip force, maximum tilt and spout clearance: <code>python -m sim_station.evaluate</code>. Results above.</p></div>
+  </div>
+</section>
+
+<section id="run">
+  <h2>Run the live dashboard</h2>
+  <p class="muted">The interactive twin (30–50 fps view with a view cube, step timeline with scrub-back, telemetry charts, belief-vs-truth overlay, Monte Carlo panel and Dance Mode) needs a Python process running MuJoCo, which a static host cannot run.</p>
+<pre>git clone https://github.com/Shaurya-Srivastav/dual-yam-digital-twin
+cd dual-yam-digital-twin
+git clone https://github.com/i2rt-robotics/i2rt third_party/i2rt     # arm and gripper models
+pip install -r requirements.txt                                     # Python 3.11; ffmpeg for Dance Mode
+./run_sim.sh                                                        # http://127.0.0.1:8090
+python -m sim_station.selftest                                      # all levels + real-data replay</pre>
+</section>
+
+<footer>Dual-YAM digital twin · MIT licence · built with MuJoCo and the i2rt SDK · <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">source</a> · <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin/blob/main/docs/RESULTS.md">full results</a> · <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin/blob/main/docs/RESEARCH.md">research notes</a></footer>
+
+<dialog id="dlg"><video id="dv" controls playsinline></video><div class="cap"><button id="dx">Close</button><h3 id="dt"></h3><div class="muted small" id="dd"></div></div></dialog>
+
+<script>
+const LEVELS = [
+ ["level1","Level 1 · Upright cup in the coaster","Cup out of the coaster, under the spout, lever lifted for 7 s, back into the coaster.","ok","passes every check"],
+ ["level2","Level 2 · Nested stack, height known","Pin the stack with the tap arm, wiggle the top cup free, flip it with one wrist roll, set it down, serve.","warn","completes; brushes the stack"],
+ ["level3","Level 3 · Nested stack, height unknown","Peck down on the stack to count the cups, then as Level 2.","warn","completes; brushes the stack"],
+ ["level4","Level 4 · Lever angle unknown","Feel for the handle, park it, touch it again to confirm, then pour.","ok","passes every check"],
+ ["level5","Level 5 · Cup anywhere on the mat","Coarse peck grid, then fit where the cup must stand from every peck.","warn","completes; housing touches the cup"],
+];
+const DANCE = [
+ ["dance_rick","Never Gonna Give You Up","Rick Astley · 113 BPM tracked","sway, pump, wave, clap"],
+ ["dance_aha","Take On Me","a-ha · 84 BPM tracked (half-time feel)","wave, circle, sway"],
+ ["dance_beegees","Stayin' Alive","Bee Gees · 103 BPM tracked","disco point, pump, clap"],
+];
+function card(grid, id, title, desc, tag, tagText){
+  const el=document.createElement("div"); el.className="card";
+  el.innerHTML=`<div class="vid"><video muted loop playsinline preload="metadata" src="videos/${id}.mp4#t=0.8"></video><div class="play"><span>▶</span></div></div><div class="body"><h3>${title}</h3><div class="small muted">${desc}</div>${tag?`<div style="margin-top:8px"><span class="tag ${tag}">${tagText}</span></div>`:""}</div>`;
+  const v=el.querySelector("video"); el.querySelector(".vid").onmouseenter=()=>v.play().catch(()=>{}); el.querySelector(".vid").onmouseleave=()=>{v.pause();};
+  el.querySelector(".vid").onclick=()=>{const d=document.getElementById("dlg"),dv=document.getElementById("dv");dv.src=`videos/${id}.mp4`;document.getElementById("dt").textContent=title;document.getElementById("dd").textContent=desc;d.showModal();dv.play().catch(()=>{});};
+  grid.appendChild(el);
+}
+LEVELS.forEach(l=>card(document.getElementById("levelGrid"),l[0],l[1],l[2],l[3],l[4]));
+DANCE.forEach(d=>card(document.getElementById("danceGrid"),d[0],d[1],d[2]+" · "+d[3],"",""));
+const dlg=document.getElementById("dlg"),dv=document.getElementById("dv");
+document.getElementById("dx").onclick=()=>dlg.close(); dlg.addEventListener("close",()=>{dv.pause();dv.removeAttribute("src");}); dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close();});
+</script>
+</body>
+</html>

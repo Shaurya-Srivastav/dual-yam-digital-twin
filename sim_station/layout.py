@@ -364,7 +364,7 @@ DANCE_TRACKS: Dict[str, dict] = {
         "youtube_id": "fNFzfwLM72c", "bpm": 104.0, "downbeat_s": 0.12, "style": "strut",
     },
     "robot": {
-        "id": "robot", "title": "Robot groove (built-in click track)", "artist": "Everest Twin",
+        "id": "robot", "title": "Robot groove (built-in click track)", "artist": "Digital Twin",
         "youtube_id": "", "bpm": 96.0, "downbeat_s": 0.0, "style": "robot",
     },
 }
