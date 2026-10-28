@@ -31,7 +31,7 @@ python -m sim_station.evaluate --levels 1 2 3 4 5 --trials 50 --jobs 8
 python -m sim_station.proofs               # replay of the real Level 1 waypoints + IK equivalence
 ```
 
-Dance Mode plays audio files from `sim_station/assets/*.mp3` (not included: bring your own; see `sim_station/audio.py` for the expected names). Beats are tracked from the audio itself and cached as numbers only.
+Dance Mode plays three songs from `sim_station/assets/*.mp3`. The recordings are copyrighted, so they are not in this public repo: the owner keeps them in a private repo and fetches them with `tools/get_audio.sh`; anyone else adds their own mp3s under the file names in `sim_station/audio.py` (`SONGS`). Beats are tracked from the audio itself and cached as numbers only.
 
 ## The five levels
 
