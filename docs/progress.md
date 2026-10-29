@@ -60,14 +60,14 @@ Nominal seed 0, paper, `Session.run` then `check_pass`. Not a Monte Carlo.
 
 | Level | Result | Cup | Flow | Sim time |
 |---|---|---|---|---|
-| 1 | pass | 3.4 mm | 6.95 s | 55 s |
-| 2 | pass | 4.9 mm | 6.95 s | 102 s |
-| 3 | pass | 4.5 mm | 6.95 s | 109 s |
-| 4 | pass | 4.1 mm | 6.95 s | 71 s |
-| 5 | pass | 13.8 mm | 6.94 s | 76 s |
+| 1 | pass | 4.5 mm | 6.95 s | 54 s |
+| 2 | pass | 7.0 mm | 6.95 s | 101 s |
+| 3 | pass | 7.0 mm | 6.95 s | 109 s |
+| 4 | pass | 4.6 mm | 6.96 s | 65 s |
+| 5 | pass | 2.3 mm | 6.95 s | 216 s |
 
 In Levels 2 and 3 the cup hand comes in with the wrist rolled half a turn the other way and closes on the middle of the inverted top cup. After the pull it rolls the wrist back to its normal position, so the cup comes out upright in the ordinary pour grip and goes straight to the spout. One arm holds the cup from the stack to the coaster; there is no hand-off and no set-down. It is an in-hand roll, not a free tumble. The grasp dips 8° (a level hand-up grasp puts J5 on its stop), so the cup leans 16° after the roll until the carry pitches the hand. In the sim the nested cups are tethered and do not collide, so squeezing the top cup at its middle does not also squeeze the cup inside it; on real cups that coupling is untested. Level 4 squares a handle when the jaws stall at 15 mm and turns that pinch to the pour angle. A handle outside that reach is felt as a narrower stall; a short push is meant to walk it into the pour sector. A fingertip sweep is not used. Level 5 lays both grippers' black pads flat and stomps one half of the mat with each arm. The slide under the spout still dips 4 mm when the wrist can; the corridor is chosen so that dip is reachable.
 
 ## Not done
 
-Randomized Levels 1–3 were rerun on 2026-10-29 (24 trials, seeds 0–23): 96 / 79 / 67 %, up from 79 / 54 / 54 %. None meets its target. Level 5 on the same day passed 24 of 24 (target 90 %). Level 4 was not part of that run. The coaster is bolted; the remaining Level 2 and 3 misses are the cup walking in the fingers. Details in `docs/RESULTS.md`. Physics ablations of the stack torque and the cup tether were not run (`stack_assist` can be turned off; that run was not done). No 100-trial benchmark. No behavior cloning and no reinforcement learning. No hardware. No new physical measurements. `.github/workflows/sim.yml` and `pyproject.toml` are in the tree; the dependencies are not pinned to a lock solved on a clean machine. Scene-as-reset replay still fails. The flip is still an in-hand roll. The songs stay off the public site.
+Randomized levels were scored on 2026-10-29 (24 trials, seeds 0–23): 96 / 79 / 67 / 21 / 100 %. Level 5 meets its 90 % target. Levels 1–4 do not. Level 4's misses are mostly a handle the pinch felt and could not turn to the pour angle. The coaster is bolted; the remaining Level 2 and 3 misses are the cup walking in the fingers. Details in `docs/RESULTS.md`. Physics ablations of the stack torque and the cup tether were not run (`stack_assist` can be turned off; that run was not done). No 100-trial benchmark. No behavior cloning and no reinforcement learning. No hardware. No new physical measurements. `.github/workflows/sim.yml` and `pyproject.toml` are in the tree; the dependencies are not pinned to a lock solved on a clean machine. Scene-as-reset replay still fails. The flip is still an in-hand roll. The songs stay off the public site.

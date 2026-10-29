@@ -2,7 +2,7 @@
  "date": "2026-10-29",
  "trials_per_level": 24,
  "seeds": "0-23, every fourth trial plastic",
- "note": "Levels 1-3 and 5 were scored on this build. Level 4 was not: its search changed after the last 24-trial run.",
+ "note": "All five levels were scored on this build, 24 trials, seeds 0-23.",
  "levels": [
   {
    "level": 1,
@@ -54,15 +54,20 @@
   {
    "level": 4,
    "name": "Lever angle unknown",
-   "passed": null,
+   "passed": 5,
    "trials": 24,
-   "rate": null,
-   "wilson": null,
+   "rate": 21,
+   "wilson": [9, 40],
    "target": 95,
    "previous": 8,
-   "unscored": "Not rerun on this build. The last 24-trial, 2 of 24 (8%), used a fingertip sweep this tree no longer runs.",
-   "failures": [],
-   "mean_time_s": null
+   "failures": [
+    ["Felt the handle but could not turn it to the pour angle", 10],
+    ["Pinched around the valve and never met the handle", 4],
+    ["Pour not 7.0 ± 0.2 s with the cup under the outlet", 2],
+    ["Dispenser moved more than 2 mm", 2],
+    ["Forbidden contact", 1]
+   ],
+   "mean_time_s": 78
   },
   {
    "level": 5,

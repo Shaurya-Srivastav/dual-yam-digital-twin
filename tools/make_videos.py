@@ -69,6 +69,10 @@ def level(lv: int, out: str) -> None:
     groups = {s.id: s.group for s in S.steps}
     chapters = []
     seen = set()
+    scalar = ("t", "cup_w", "tap_w", "cup_f", "tap_f", "cup_cap", "tap_cap", "cup_speed", "tap_speed", "contact", "contact_thr", "lever", "flow")
+    tel = {k: [] for k in scalar}
+    joints = {f"{a}_{k}": [] for a in ARMS for k in ("q", "qd", "tau")}
+    tel_nxt, last_flow = 0.0, P.flow_time
     while not S.ex.finished and not S.ex.fault and P.time - S.t_zero < 400:
         S.tick()
         t = P.time - S.t_zero
@@ -76,6 +80,30 @@ def level(lv: int, out: str) -> None:
             if sid not in seen:
                 seen.add(sid)
                 chapters.append(dict(t=round(t, 2), id=sid, title=names[sid], group=groups[sid]))
+        if t >= tel_nxt:
+            tel_nxt += 0.1
+            row = P._history_sample()
+            gs = S.ctx.guard_state
+            if gs.get("label"):
+                contact = float(gs["value"])
+            else:
+                mon = [S.ctx.mon[a].force for a in ARMS if S.ctx.mon_on[a]]
+                contact = float(np.linalg.norm(mon[0])) if mon else 0.0
+            tel["t"].append(round(t, 2))
+            for a in ARMS:
+                obs = P.read_arm(a)
+                tel[f"{a}_w"].append(round(row[f"{a}_width_mm"], 1))
+                tel[f"{a}_f"].append(round(row[f"{a}_grip_f"], 2))
+                tel[f"{a}_cap"].append(round(float(P.ctl[a]["grip_cap"]), 2))
+                tel[f"{a}_speed"].append(round(float(row[f"{a}_speed"]) * 1000.0, 1))
+                joints[f"{a}_q"].append([round(float(np.degrees(x)), 2) for x in obs.q])
+                joints[f"{a}_qd"].append([round(float(np.degrees(x)), 2) for x in obs.qd])
+                joints[f"{a}_tau"].append([round(float(x), 3) for x in obs.tau])
+            tel["contact"].append(round(contact, 2))
+            tel["contact_thr"].append(round(float(gs.get("threshold") or 0.0), 2))
+            tel["lever"].append(round(float(np.degrees(row["lever"])), 1))
+            tel["flow"].append(int(P.flow_time > last_flow))
+            last_flow = P.flow_time
         if t >= nxt:
             nxt += 1.0 / FPS
             r.update_scene(P.data, camera=cam)
@@ -88,9 +116,12 @@ def level(lv: int, out: str) -> None:
         verdict = "all referee checks passed" if res["ok"] else "did not pass: " + ", ".join(res["reasons"][:3])
         sink.write(np.asarray(caption(r.render(), [f"Level {lv} finished: {verdict}"[:80], f"flow {res['flow_s']:.2f} s  ·  cup {res['coaster_offset_mm']:.0f} mm from the coaster centre  ·  {res['sim_time_s']:.0f} s"])))
     sink.close()
+    n = len(tel["t"])
+    for key, rows in joints.items():
+        tel[key] = [[rows[s][j] for s in range(n)] for j in range(6)]
     summary = dict(level=lv, ok=bool(res["ok"]), flow_s=round(float(res["flow_s"]), 2),
                    coaster_offset_mm=round(float(res["coaster_offset_mm"]), 1), sim_time_s=round(float(res["sim_time_s"]), 1),
-                   chapters=chapters)
+                   chapters=chapters, telemetry=tel)
     Path(out).with_suffix(".json").write_text(json.dumps(summary, indent=1))
     print(f"level {lv}: pass={res['ok']} {res['reasons']}")
 

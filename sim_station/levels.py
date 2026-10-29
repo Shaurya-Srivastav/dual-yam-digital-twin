@@ -119,7 +119,7 @@ def build_level(level: int, ctx: Ctx) -> List[StepDef]:
         # The tap arm walks the whole circle of the valve. The cup arm stays folded until that walk is
         # finished, which is what keeps the two arms from meeting over the mat.
         steps = pick_upright(ctx, "", ctx.bel.cup_xy, seat, first_deps=("tap.search",)) + serve_steps(ctx, "", "cup.lift", seat, tap_after=("tap.search",))
-        steps.insert(0, _step("tap.search", "Tap arm: close on the knob, then walk the circle to find the handle", "Pour", "tap", [],
+        steps.insert(0, _step("tap.search", "Tap arm: pinch around the valve until the jaws stall on the handle", "Pour", "tap", [],
                               lambda c: S3.s_lever_search(c), "a close that stalls at 15 mm has the paddle; the dispenser is not pushed"))
         return steps
     if level == 5:
