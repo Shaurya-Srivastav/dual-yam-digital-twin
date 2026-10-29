@@ -788,38 +788,39 @@ def s_lever_hold(ctx: Ctx):
 
 
 def _regrasp_paddle(ctx: Ctx, width: float) -> float:
-    """The close missed the 15 mm paddle. Step around the hinge and close again. Do not lift until the width is right."""
+    """The close missed the 15 mm paddle. Step around the hinge and close again.
+
+    An empty close did not touch the paddle, so it is not a reason to stop: the next offset may be the one
+    that lands on it. A wide walk is what spins the handle, so these steps stay inside a centimetre.
+    """
     kin = ctx.kin["tap"]
     psi0 = float(ctx.bel.lever_yaw)
     last = fmt_mm(width)
-    # A few millimetres and a few degrees. A wide walk turns the handle and then closes on nothing.
-    for dy in (0.0, 0.006, -0.006):
-        for deg in (0.0, 6.0, -6.0):
-            if dy == 0.0 and deg == 0.0:
-                continue
-            psi = float(_wrap_pi(psi0 + np.radians(deg)))
-            T = lever_frame(ctx, psi)
-            T[:3, 3] = T[:3, 3] + T[:3, 1] * dy
-            yield from ctx.grip_open("tap", 0.028, cap=6.0)
-            try:
-                traj = M.cart_move(kin, [ctx.tcp("tap"), T], ctx.q("tap"), v_cart=0.03, speed_scale=ctx.speed,
-                                   min_T=0.35, max_joint_step=0.16)
-                ctx.check_traj("tap", traj, grip_width=0.028)
-            except PlanError:
-                continue
-            yield from ctx.play("tap", traj)
-            res = yield from ctx.grip_close("tap", L.FORCE_CAP_RIM_AND_LEVER_N, rate=0.03)
-            yield from ctx.wait(0.25)
-            w = float(ctx.width("tap"))
-            last = fmt_mm(w)
-            if w < 0.004:
-                # The paddle is no longer between the fingers. Stop before the walk shoves the valve.
-                ctx.monitor("tap", False)
-                raise SkillFault(f"jaws stalled at {last}; the handle is 15 mm wide")
-            if 0.0120 < w < 0.0205:
-                ctx.bel.lever_yaw = psi
-                ctx.event(f"re-closed on the paddle at {np.degrees(psi):.0f} deg, jaws {last}")
-                return float(w)
+    # jaw mm, along the handle mm, yaw deg. The base error is a few millimetres in any of the three.
+    shifts = ((0.0, 0.0, 8.0), (0.0, 0.0, -8.0), (8.0, 0.0, 0.0), (-8.0, 0.0, 0.0),
+              (0.0, 8.0, 0.0), (0.0, -8.0, 0.0), (6.0, 6.0, 0.0), (-6.0, -6.0, 0.0),
+              (0.0, 0.0, 14.0), (0.0, 0.0, -14.0))
+    for jaw_mm, along_mm, deg in shifts:
+        psi = float(_wrap_pi(psi0 + np.radians(deg)))
+        T = lever_frame(ctx, psi)
+        T[:3, 3] = T[:3, 3] + T[:3, 1] * (jaw_mm * 0.001) + T[:3, 2] * (along_mm * 0.001)
+        yield from ctx.grip_open("tap", 0.028, cap=6.0)
+        try:
+            traj = M.cart_move(kin, [ctx.tcp("tap"), T], ctx.q("tap"), v_cart=0.03, speed_scale=ctx.speed,
+                               min_T=0.35, max_joint_step=0.16)
+            ctx.check_traj("tap", traj, grip_width=0.028)
+        except PlanError:
+            continue
+        yield from ctx.play("tap", traj)
+        yield from ctx.grip_close("tap", 6.0, rate=0.03)
+        yield from ctx.wait(0.25)
+        w = float(ctx.width("tap"))
+        last = fmt_mm(w)
+        ctx.event(f"regrasp jaw {jaw_mm:.0f} mm, along {along_mm:.0f} mm, {deg:.0f} deg: {last}")
+        if 0.0120 < w < 0.0205:
+            ctx.bel.lever_yaw = psi
+            ctx.event(f"re-closed on the paddle at {np.degrees(psi):.0f} deg, jaws {last}")
+            return float(w)
     ctx.monitor("tap", False)
     raise SkillFault(f"jaws stalled at {last}; the handle is 15 mm wide")
 

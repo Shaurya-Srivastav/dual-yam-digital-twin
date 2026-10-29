@@ -9,7 +9,7 @@ Run these from the repository root with `PYTHONPATH` set to that root and `I2RT_
 | `python3 tests/test_planner_scene.py` | Planner uses the belief, not the live cup or lever. | Same. |
 | `python3 tests/test_contracts.py` | Graphs, JSON, API bounds, hardware lock, all five level graphs. | Same. |
 | `python3 -m sim_station.selftest` | Nominal levels 1–5, pose-aligned replay, FK/IK self-check. Scene-as-reset is printed and does not affect the exit code. | Same. |
-| `python3 -m sim_station.evaluate --levels 1 2 3 4 5 --trials 24 --jobs 8` | Randomized rates. Levels 1–3 in `docs/RESULTS.md` are the 2026-10-29 run, 24 trials, seeds 0–23. Levels 4 and 5 were not part of that run. | |
+| `python3 -m sim_station.evaluate --levels 1 2 3 4 5 --trials 24 --jobs 8` | Randomized rates. Levels 1–3 and 5 in `docs/RESULTS.md` are the 2026-10-29 run, 24 trials, seeds 0–23. Level 4 was not part of that run. | |
 
 `make test-fast` is the first row. `make test-nominal` is the selftest. None of these pass `--hardware`.
 

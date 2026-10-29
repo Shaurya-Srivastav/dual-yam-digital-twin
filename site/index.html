@@ -444,7 +444,7 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
 
 <section id="results"><div class="wrap">
   <div class="rv"><span class="eyebrow">Results</span>
-  <h2>Levels 1–3 were rescored on this build. Levels 4 and 5 were not.</h2>
+  <h2>Levels 1–3 and 5 were rescored on this build. Level 4 was not.</h2>
   <p class="lead">24 trials, seeds 0–23, every fourth one a plastic cup. Object positions vary ±1 cm. The coaster is bolted and does not move; a cup sitting in it may rest ±2 mm off centre, and a stack still jitters ±8 mm. Friction and mass ±25–30 %, gains ±10 %, base pose, sensor noise and 2–5 tick delay. Click a scored level to see why its trials failed.</p></div>
   <div class="legend rv">
     <span><i style="width:14px;height:8px;border-radius:4px;background:var(--accent)"></i>pass rate</span>
@@ -454,7 +454,7 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
   </div>
   <div class="chart rv" id="chart"></div>
   <details class="gaps rv" id="gaps">
-    <summary><div><span class="eyebrow">Gaps still remaining</span><h3>What this build still misses, and what has not been scored</h3><p>The rescored failures, the two levels that were not rerun, and the limits of the twin.</p></div><span class="count" aria-label="6 gaps">6</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+    <summary><div><span class="eyebrow">Gaps still remaining</span><h3>What this build still misses, and what has not been scored</h3><p>The rescored failures, Level 4 which was not rerun, and the limits of the twin.</p></div><span class="count" aria-label="5 gaps">5</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
     <div class="issues" id="issues"></div>
   </details>
 </div></section>
@@ -530,7 +530,6 @@ const ISSUES=[
  ["b","One Level 1 handle pinch closes on nothing","Seed 22. The jaws finish shut instead of stalling on the 15 mm paddle, so the pour never starts. The other 23 Level 1 trials passed, including the 7.0 ± 0.2 s pour."],
  ["b","Level 3 still misses some stacks","Three trials have no collision-free pin on the lower stack. One grasp stalls short of the top cup, and one pour is shorter than 7.0 ± 0.2 s. Level 2 has the same short grasp on one seed, and one cup left tilted."],
  ["b","Level 4 has not been rescored","Handles near the pour angle can be squared and parked with the dispenser under 2 mm in single-yaw checks. Handles on the far side of the tank are felt, and the short push that should turn them meets the tank or runs out of time. The old 8% table used a fingertip sweep this tree no longer runs."],
- ["b","Level 5 has not been rescored on this pour","The flat two-hand stomp is what runs. Earlier on 2026-10-29 that search passed 23 of 24, with one pad hitting the tank during the pour. The pour path changed after that run."],
  ["w","Modelling, and not run on hardware","Position actuators, a tethered stack, and inferred dish, tap-base and spigot geometry. Nothing in this tree has moved the real arms. Scene-as-reset replay still fails."],
 ];
 const $=s=>document.querySelector(s), reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
