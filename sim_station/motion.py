@@ -164,10 +164,18 @@ def cart_path(kin: ArmKin, poses: Sequence[np.ndarray], q_seed: np.ndarray, step
 
 def cart_move(kin: ArmKin, poses: Sequence[np.ndarray], q_seed: np.ndarray, v_cart: float = L.CARRY_SPEED_M_S,
               dt: float = L.CONTROL_DT, speed_scale: float = 1.0, min_T: float = 0.25, posture: Optional[np.ndarray] = None,
-              step_m: float = 0.004, max_joint_step: float = 0.12, profile: str = "minjerk") -> Traj:
+              step_m: float = 0.004, max_joint_step: float = 0.12, profile: str = "minjerk",
+              timing: str = "peak") -> Traj:
     u_grid, path_q, length = cart_path(kin, poses, q_seed, step_m=step_m, posture=posture, max_joint_step=max_joint_step)
     dq_du = np.gradient(path_q, u_grid, axis=0) if len(u_grid) > 2 else (path_q[-1] - path_q[0])[None, :]
-    if profile == "trapezoid":
+    if timing == "travel":
+        # Time from the joint travel, not the sharpest sample. One inverse-kinematics twitch
+        # would otherwise stretch the whole arc and the hand appears to hang, then snap.
+        travel = np.sum(np.abs(np.diff(path_q, axis=0)), axis=0) if len(path_q) > 1 else np.zeros(6)
+        T_v = 1.875 * float(np.max(travel / L.MAX_JOINT_VEL)) if travel.size else 0.0
+        T_c = 1.875 * length / max(v_cart, 1e-3)
+        T = max(T_v, T_c, min_T) / max(speed_scale, 1e-3)
+    elif profile == "trapezoid":
         # cruise at v_cart: path time = L / v plus the two ramps, subject to the same joint limits
         T = max(duration_for(dq_du, length, v_cart * 1.875 / 1.0, speed_scale, min_T), length / max(v_cart, 1e-3) * 1.0 + 0.18)
         T = max(T, length / max(v_cart, 1e-3) * (1.0 + 0.2) / speed_scale)

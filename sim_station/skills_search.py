@@ -1,4 +1,6 @@
-"""Search skills built from one primitive: a vertical peck with the closed fingertips.
+"""Search skills built from one primitive: a vertical peck.
+
+Level 3 closes the fingertips into a blade. Level 5 spreads the jaws into a stamp and still comes down steeply, because a shallow forearm puts the wrist housing into the cup.
 
 A peck descends at a controlled speed until the torque-residual force says something pushed back, and reports the
 TCP height where it stopped. Everything else (stack height, cup location, handle yaw) is inferred from those numbers.
@@ -29,6 +31,10 @@ PECK_THRESHOLD_N = 1.2
 # The stack stands farther out; those same tilts miss inverse kinematics, so the height peck keeps the shallower set that reaches it.
 CUP_TILTS = (-84.0, -78.0, -72.0, -66.0)
 STACK_TILTS = (-70.0, -62.0, -78.0, -54.0)
+# Level 5 spreads the jaws. The pads still come down steeply, or a shallow hand misses the cup
+# it is aiming at. The width, not a fingertip point, is what covers the rim.
+STAMP_TILTS = (-78.0, -72.0, -84.0, -66.0)
+STAMP_WIDTH = 0.062
 PECK_TILTS = CUP_TILTS
 
 
@@ -45,6 +51,17 @@ def _frame_for_peck(ctx: Ctx, xy: np.ndarray, z: float, tilts=PECK_TILTS, depth:
         r1 = kin.ik_multi(T_hi, seeds)
         r2 = kin.ik_multi(T_lo, seeds + [r1.q]) if r1.ok else None
         if r1.ok and r2 is not None and r2.ok:
+            if ctx.scratch.get("probe") == "stamp":
+                # Put the midpoint of the two fingertip pads over the query, not the wrist.
+                mid = np.array([0.0, 0.0, -L.PAD_TIP_HALF[2]])
+                for T in (T_hi, T_lo):
+                    T[:2, 3] -= (T[:3, :3] @ mid)[:2]
+                z_free = L.MAT_SURFACE_Z - L.pad_lowest_offset(T_hi[:3, :3])
+                T_lo[2, 3] = z_free - 0.003
+                r1 = kin.ik_multi(T_hi, seeds + [r1.q])
+                r2 = kin.ik_multi(T_lo, seeds + [r1.q]) if r1.ok else None
+                if not (r1.ok and r2 is not None and r2.ok):
+                    continue
             ctx.scratch["peck_tilt"] = tilt
             return T_hi, T_lo, z_free, r1.q
     return None
@@ -54,7 +71,10 @@ def _s_peck_impl(ctx: Ctx, xy: np.ndarray, z_hi: float = PECK_Z_HI, v_down: floa
            stack_peck: bool = False):
     """Descend with closed fingertips above `xy`. Returns dict(contact, z, occupied, z_free)."""
     kin = ctx.kin["cup"]
-    fr = _frame_for_peck(ctx, np.asarray(xy, dtype=float), z_hi, tilts=STACK_TILTS if stack_peck else CUP_TILTS)
+    if ctx.scratch.get("probe") == "stamp":
+        v_down = min(float(v_down), 0.07)
+    fr = _frame_for_peck(ctx, np.asarray(xy, dtype=float), z_hi,
+                         tilts=STACK_TILTS if stack_peck else (STAMP_TILTS if ctx.scratch.get("probe") == "stamp" else CUP_TILTS))
     if fr is None:
         return dict(contact=False, z=float("nan"), occupied=False, z_free=float("nan"), reachable=False)
     T_hi, T_lo, z_free, q_hi = fr
@@ -125,8 +145,15 @@ def s_peck(ctx: Ctx, *args, **kwargs):
 
 def s_close_fingertips(ctx: Ctx):
     yield from ctx.grip_open("cup", 0.0, cap=L.FORCE_CAP_PROBE_N, tol=0.0015, timeout=3.5)
+    ctx.scratch["probe"] = "blade"
     return {"msg": "fingertips closed into a blade for pecking"}
 
+
+def s_open_stamp(ctx: Ctx):
+    """Spread the jaws and come down with the hand flatter, so the two pads cover a patch of the mat."""
+    w = yield from ctx.grip_open("cup", STAMP_WIDTH, cap=L.FORCE_CAP_PROBE_N, tol=0.002, timeout=3.5)
+    ctx.scratch["probe"] = "stamp"
+    return {"msg": f"jaws at {fmt_mm(w)}, hand low: a stamp across the rim, not a fingertip point"}
 
 # ---------------------------------------------------------------------------
 # Level 3: how tall is the stack?
@@ -226,15 +253,17 @@ def _cup_violations(ctx: Ctx, c: np.ndarray, stop_at: int = 99) -> int:
     """How many peck outcomes contradict a cup standing at c: a peck that stopped high must be touching the cup at the stop
     and clear of it a few millimetres earlier; a peck that reached the mat must never have touched it."""
     P = ctx.plant
+    pads = ctx.scratch.get("probe") == "stamp"
     v = 0
     for pk in ctx.scratch.get("peck_log", []):
         if pk["occupied"]:
-            if not P.cup_hits_arm("cup", pk["q_post"], pk["grip"], c):
+            if not P.cup_hits_arm("cup", pk["q_post"], pk["grip"], c, pads_only=pads):
                 v += 1
-            if P.cup_hits_arm("cup", pk["q_pre"], pk["grip"], c):
+            if P.cup_hits_arm("cup", pk["q_pre"], pk["grip"], c, pads_only=pads):
                 v += 1
         else:
-            if P.cup_hits_arm("cup", pk["q_stop"], pk["grip"], c) or P.cup_hits_arm("cup", pk["q_bottom"], pk["grip"], c):
+            if (P.cup_hits_arm("cup", pk["q_stop"], pk["grip"], c, pads_only=pads)
+                    or P.cup_hits_arm("cup", pk["q_bottom"], pk["grip"], c, pads_only=pads)):
                 v += 1
         if v >= stop_at:
             break
@@ -373,7 +402,7 @@ def s_scan_mat(ctx: Ctx):
         done += 1
         if r["reachable"] and r["occupied"]:
             ctx.bel.found["coarse_hit"] = np.asarray(p, float).copy()
-            ctx.event(f"coarse hit at ({p[0]:.3f}, {p[1]:.3f}): blade stopped at {r['z'] * 100:.1f} cm after {done} pecks")
+            ctx.event(f"coarse hit at ({p[0]:.3f}, {p[1]:.3f}): stamp stopped at {r['z'] * 100:.1f} cm after {done} pecks")
             return True
         return False
 

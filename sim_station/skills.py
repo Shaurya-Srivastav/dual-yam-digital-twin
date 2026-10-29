@@ -288,8 +288,17 @@ def s_slide_under(ctx: Ctx):
     kin = ctx.kin["cup"]
     xs, ys = ctx.bel.spout_xy
     T0 = ctx.tcp("cup")
-    T1 = side_frame(kin, np.array([xs, ys]), spout_z(), tilt=ctx.scratch.get("spout_tilt", 0.0))
-    traj = M.cart_move(kin, [T0, T1], ctx.q("cup"), v_cart=0.10, speed_scale=ctx.speed, min_T=1.0, max_joint_step=0.2)
+    tilt = ctx.scratch.get("spout_tilt", 0.0)
+    T1 = side_frame(kin, np.array([xs, ys]), spout_z(), tilt=tilt)
+    # The carry can leave the cup leaning a few degrees in the fingers. The high side of the rim
+    # then meets the spout tip if the slide stays at the final height, so come in low and rise
+    # only once the tip is over the mouth.
+    z_low = spout_z() - 0.004
+    T_dip = T0.copy()
+    T_dip[2, 3] = z_low
+    T_mid = T1.copy()
+    T_mid[2, 3] = z_low
+    traj = M.cart_move(kin, [T0, T_dip, T_mid, T1], ctx.q("cup"), v_cart=0.08, speed_scale=ctx.speed, min_T=1.2, max_joint_step=0.2)
     ctx.check_traj("cup", traj)
     yield from ctx.play("cup", traj)
     yield from ctx.wait(0.25)
@@ -302,9 +311,13 @@ def s_exit_spout(ctx: Ctx):
     T0 = ctx.tcp("cup")
     e = ctx.scratch["spout_entry"]
     tilt = ctx.scratch.get("spout_tilt", 0.0)
+    z_low = spout_z() - 0.004
+    T_dip = T0.copy()
+    T_dip[2, 3] = z_low
+    p_low = side_frame(kin, e, z_low, tilt=tilt)
     p1 = side_frame(kin, e, spout_z() + 0.002, tilt=tilt)
     p2 = side_frame(kin, e, 0.118, tilt=tilt)
-    traj = M.cart_move(kin, [T0, p1, p2], ctx.q("cup"), v_cart=0.10, speed_scale=ctx.speed, min_T=1.0, max_joint_step=0.2)
+    traj = M.cart_move(kin, [T0, T_dip, p_low, p1, p2], ctx.q("cup"), v_cart=0.08, speed_scale=ctx.speed, min_T=1.2, max_joint_step=0.2)
     ctx.check_traj("cup", traj)
     yield from ctx.play("cup", traj)
     return {"msg": "slid out sideways under the outlet, then lifted clear"}
@@ -455,8 +468,8 @@ def s_release(ctx: Ctx):
     return {"msg": f"jaws opened to {fmt_mm(ctx.width('cup'))}, cup released"}
 
 
-def s_retreat(ctx: Ctx, options=((0.05, 0.05), (0.035, 0.07), (0.02, 0.09), (0.0, 0.10))):
-    """Pull the hand out of the served cup: back along the approach and up, taking the first reachable option."""
+def s_retreat(ctx: Ctx, options=((0.06, 0.09), (0.04, 0.10), (0.08, 0.07), (0.0, 0.12))):
+    """Pull straight back out of the wall, then rise. A diagonal drags the open fingers across the rim and throws the cup."""
     kin = ctx.kin["cup"]
     T0 = ctx.tcp("cup")
     a_h = T0[:3, 2].copy()
@@ -464,16 +477,23 @@ def s_retreat(ctx: Ctx, options=((0.05, 0.05), (0.035, 0.07), (0.02, 0.09), (0.0
     a_h = a_h / max(np.linalg.norm(a_h), 1e-6)
     last = ""
     for back, up in options:
-        T1 = T0.copy()
-        T1[:3, 3] = T0[:3, 3] - a_h * back + Z_UP * up
+        pts = [T0]
+        if back > 1e-4:
+            Tb = T0.copy()
+            Tb[:3, 3] = T0[:3, 3] - a_h * back
+            pts.append(Tb)
+        T1 = pts[-1].copy()
+        T1[:3, 3] = pts[-1][:3, 3] + Z_UP * up
+        pts.append(T1)
         try:
-            traj = M.cart_move(kin, [T0, T1], ctx.q("cup"), v_cart=0.08, speed_scale=ctx.speed, min_T=0.8)
+            traj = M.cart_move(kin, pts, ctx.q("cup"), v_cart=0.06, speed_scale=ctx.speed, min_T=0.7,
+                               max_joint_step=0.18, step_m=0.006)
             ctx.check_traj("cup", traj)
         except PlanError as exc:
             last = str(exc)
             continue
         yield from ctx.play("cup", traj)
-        return {"msg": f"hand backed out {back * 100:.0f} cm and raised {up * 100:.0f} cm clear of the served cup"}
+        return {"msg": f"hand backed out {back * 100:.0f} cm, then raised {up * 100:.0f} cm clear of the served cup"}
     raise SkillFault(f"no reachable way to pull the hand out of the cup: {last}")
 
 

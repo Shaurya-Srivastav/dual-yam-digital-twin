@@ -729,9 +729,10 @@ class Plant:
         qa = self.free_qadr[name]
         s.qpos[qa: qa + 7] = [float(xy[0]), float(xy[1]), float(z), *quat]
 
-    def cup_hits_arm(self, arm: str, q: np.ndarray, grip: float, cup_xy: np.ndarray) -> bool:
+    def cup_hits_arm(self, arm: str, q: np.ndarray, grip: float, cup_xy: np.ndarray, pads_only: bool = False) -> bool:
         """Would an upright cup standing at cup_xy touch this arm at joint vector q? This is the planner's model query
-        (the arm's and the cup's CAD), evaluated on a scratch copy: the true cup pose is overwritten, never read."""
+        (the arm's and the cup's CAD), evaluated on a scratch copy: the true cup pose is overwritten, never read.
+        pads_only counts the fingertip pads, which is what a stamp's stop height actually felt."""
         s = self.scratch
         s.qpos[:] = self.data.qpos
         s.qvel[:] = 0.0
@@ -748,6 +749,11 @@ class Plant:
             c = s.contact[i]
             g1, g2 = int(c.geom1), int(c.geom2)
             if (g1 in cup_g and g2 in arm_g) or (g2 in cup_g and g1 in arm_g):
+                if pads_only:
+                    arm_geom = g2 if g1 in cup_g else g1
+                    name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, arm_geom) or ""
+                    if "_pad" not in name:
+                        continue
                 return True
         return False
 

@@ -94,21 +94,20 @@ def _chain(kin, poses, seeds, q0, jump: float = 0.55):
 
 
 def flip_motion(kin, T0: np.ndarray, a: np.ndarray, sgn: float, xy, z_top: float) -> list:
-    """Lift the cup clear of the stack first, then roll it upright, then slide it off the stack.
+    """One arc: clear the stack, then roll the cup while the hand is still moving.
 
-    Rolling while the cup is still beside the cups under it knocks it out of the fingers.
-    The wrist housing cannot follow the base all the way to the mat, so the descent stops
-    where the set-down takes over."""
+    A roll that happens after the hand has stopped looks like the cup spins in mid-air.
+    The turn stays near 28 cm, which is where this wrist can reach it, and it starts
+    only after the cup is off to the side of the stack. The last centimetres are a
+    straight drop the set-down finishes, because the wrist housing meets the table.
+    """
     away = np.asarray(xy, float) - kin.mount[:2]
     away = away / max(float(np.linalg.norm(away)), 1e-6)
     R0 = T0[:3, :3].copy()
     p0 = T0[:3, 3].copy()
-    # Lift the inverted cup clear of the stack, carry it 9 cm off to the side, then roll.
-    # The roll itself is only reachable near 28 cm; above that the wrist stops short, and
-    # rolling while the cup is still in the stack knocks it out of the fingers.
-    # 170 deg, not 180: the last 10 deg is 3 mm past the wrist, and the cup is already within 10 deg of upright.
     z_clear = max(0.31, float(p0[2]) + 0.02)
     z_roll = 0.275
+    phi_end = np.pi * 170.0 / 180.0
     poses = []
 
     def add(R, p):
@@ -117,21 +116,21 @@ def flip_motion(kin, T0: np.ndarray, a: np.ndarray, sgn: float, xy, z_top: float
         T[:3, 3] = np.asarray(p, float)
         poses.append(T)
 
-    for z in np.linspace(float(p0[2]), z_clear, 5)[1:]:
+    # Clear the stack first. Turning while the cup is still in the nest knocks it out of the fingers.
+    for z in np.linspace(float(p0[2]), z_clear, 4)[1:]:
         add(R0, [p0[0], p0[1], z])
-    p = np.array([p0[0], p0[1], z_clear])
-    for s in (0.045, 0.09):
-        p = np.array([p0[0] - away[0] * s, p0[1] - away[1] * s, z_clear])
-        add(R0, p)
+    for s in (0.05, 0.09):
+        add(R0, [p0[0] - away[0] * s, p0[1] - away[1] * s, z_clear])
     for z in np.linspace(z_clear, z_roll, 3)[1:]:
-        p = np.array([p[0], p[1], z])
-        add(R0, p)
-    Rend = R0
-    for phi in np.linspace(0.0, np.pi * 170.0 / 180.0, 18)[1:]:
-        Rend = rot_about(a, sgn * phi) @ R0
-        add(Rend, [p[0], p[1], z_roll])
-    for z in np.linspace(z_roll, 0.05, 5)[1:]:
-        add(Rend, [p[0], p[1], z])
+        add(R0, [p0[0] - away[0] * 0.09, p0[1] - away[1] * 0.09, z])
+    # Roll at the height the wrist can reach, and keep sliding so the hand does not stop and spin.
+    for i, phi in enumerate(np.linspace(0.0, phi_end, 14)[1:], start=1):
+        u = i / 13.0
+        s = 0.09 + 0.025 * u
+        add(rot_about(a, sgn * phi) @ R0, [p0[0] - away[0] * s, p0[1] - away[1] * s, z_roll])
+    end = poses[-1]
+    for z in np.linspace(z_roll, 0.055, 4)[1:]:
+        add(end[:3, :3], [end[0, 3], end[1, 3], z])
     return poses
 
 
@@ -526,9 +525,8 @@ def s_unstack(ctx: Ctx):
             break
         except PlanError:
             continue
-    yield from ctx.wait(0.6)
     samples = []
-    for _ in range(int(0.6 / dt)):
+    for _ in range(int(0.2 / dt)):
         samples.append(float(ctx.mon["cup"].force @ pull))
         ctx.hold("cup")
         yield
@@ -1055,8 +1053,9 @@ def s_flip_lift(ctx: Ctx):
         # Joint interpolation between the solved poses swings the hand ~30 mm and throws the cup.
         # Follow the Cartesian arc, seeded from the solution we already found.
         poses_ok = [kin.fk(q) for q in kept]
-        traj = M.cart_move(kin, [ctx.tcp("cup")] + poses_ok, ctx.q("cup"), v_cart=0.05,
-                           speed_scale=ctx.speed, min_T=8.0, max_joint_step=0.5, step_m=0.01)
+        traj = M.cart_move(kin, [ctx.tcp("cup")] + poses_ok, ctx.q("cup"), v_cart=0.16,
+                           speed_scale=ctx.speed, min_T=1.6, max_joint_step=0.35, step_m=0.008,
+                           timing="travel")
         ctx.check_traj("cup", traj, other_q=L.REST_Q, grip_width=w0)
     except PlanError as exc:
         raise SkillFault(f"the rising roll would hit something ({exc})")
@@ -1070,7 +1069,6 @@ def s_flip_lift(ctx: Ctx):
         note["s"] = f"grip {ctx.mon['cup'].grip_force:.2f} N at tcp z {float(ctx.tcp('cup')[2, 3]):.3f}"
 
     yield from ctx.play("cup", traj, on_tick=on_tick)
-    yield from ctx.wait(0.25)
     slipped = ctx.mon["cup"].grip_force < 2.0 or ctx.width("cup") > w0 + 0.004
     grip = ctx.mon["cup"].grip_force
     ctx.monitor("cup", False)

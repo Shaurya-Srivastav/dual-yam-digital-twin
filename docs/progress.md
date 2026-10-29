@@ -54,6 +54,20 @@ These commands were run on this working tree. Exit code 0 unless noted.
 
 A global step now waits until both arm lanes are free, and an arm step does not start while a global step is running. The nominal pour step already waited on the previous arm steps, and the selftest still passes. The solver line in the MJCF is `sim_station/physics_manifest.py`. The force sign is the same formula as before, called from `world_force_from_tau`.
 
+## Motion retest after the flip and the stamp
+
+Nominal seed 0, paper, `Session.run` then `check_pass`. Not a Monte Carlo.
+
+| Level | Result | Cup | Flow | Sim time |
+|---|---|---|---|---|
+| 1 | pass | 4.5 mm | 6.95 s | 54 s |
+| 2 | pass | 10.3 mm | 6.95 s | 115 s |
+| 3 | pass | 10.3 mm | 6.95 s | 121 s |
+| 4 | pass | 4.5 mm | 6.96 s | 54 s |
+| 5 | pass | 13.5 mm | 6.94 s | 76 s |
+
+The Level 2 and 3 roll is still the wrist turning the cup while the fingers hold it. It is not a free tumble. The previous video crawled because one joint twitch stretched the whole arc; the roll is now timed from the joint travel, and the hand keeps sliding while it turns. After the cup is on the coaster the hand backs straight out before it rises, so the open fingers do not sweep the cup off. Level 5 pecks with the jaws at 62 mm. The wrist stays steep. A coarse stamp hit is fit from the fingertip pads only. The slide under the spout dips 4 mm so a cup that has leaned in the fingers does not meet the spout tip, then rises once the tip is over the mouth.
+
 ## Not done
 
 Randomized rates were not rerun, so 79 / 42 / 42 / 21 / 12 % is still the last measured table, on `32b5d08`, not a claim about this branch. Physics ablations of the stack torque and the cup tether were not run (`stack_assist` can be turned off; that run was not done). No 100-trial benchmark. No Playwright run. No behavior cloning and no reinforcement learning. No hardware. No new measurements. `.github/workflows/sim.yml` and `pyproject.toml` are in the tree; the workflow has not been observed on GitHub, and the dependencies are not pinned to a lock solved on a clean machine. The public site is not redeployed from this branch.

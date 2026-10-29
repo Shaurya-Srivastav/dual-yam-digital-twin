@@ -132,9 +132,9 @@ def build_level(level: int, ctx: Ctx) -> List[StepDef]:
         return steps
     if level == 5:
         steps = [
-            _step("cup.blade", "Cup arm: close the fingertips into a blade", "Pick", "cup", [], lambda c: S3.s_close_fingertips(c), "jaws closed"),
-            _step("cup.scan", "Cup arm: peck a coarse grid until something stands up", "Pick", "cup", ["cup.blade"],
-                  lambda c: S3.s_scan_mat(c), "5 cm grid, stop heights read from torque"),
+            _step("cup.stamp", "Cup arm: open the hand into a flat stamp", "Pick", "cup", [], lambda c: S3.s_open_stamp(c), "jaws spread"),
+            _step("cup.scan", "Cup arm: stamp a coarse grid until something stands up", "Pick", "cup", ["cup.stamp"],
+                  lambda c: S3.s_scan_mat(c), "open pads, stop heights read from torque"),
             _step("cup.find", "Cup arm: peck the cup's edges to fit its centre", "Pick", "cup", ["cup.scan"],
                   lambda c: S3.s_fit_cup(c, c.bel.found["coarse_hit"]), "set-membership fit of the stop heights"),
         ]
