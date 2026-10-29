@@ -1,0 +1,178 @@
+{
+ "trials_per_level": 24,
+ "seeds": "0-23, every fourth trial plastic",
+ "levels": [
+  {
+   "level": 1,
+   "name": "Upright cup",
+   "passed": 19,
+   "trials": 24,
+   "rate": 79,
+   "wilson": [
+    60,
+    91
+   ],
+   "target": 98,
+   "previous": 79,
+   "failures": [
+    [
+     "Grasp missed the cup",
+     2
+    ],
+    [
+     "Cup more than 15 mm from the coaster centre",
+     2
+    ],
+    [
+     "Contact the referee forbids",
+     1
+    ]
+   ],
+   "mean_time_s": 55
+  },
+  {
+   "level": 2,
+   "name": "Stack, height known",
+   "passed": 13,
+   "trials": 24,
+   "rate": 54,
+   "wilson": [
+    35,
+    72
+   ],
+   "target": 98,
+   "previous": 42,
+   "failures": [
+    [
+     "Cup more than 15 mm from the coaster centre",
+     5
+    ],
+    [
+     "Pour not 7.0 \u00b1 0.2 s with the cup under the outlet",
+     2
+    ],
+    [
+     "Lever lift IK branch jump",
+     1
+    ],
+    [
+     "No collision-free pin pose for this stack height",
+     1
+    ],
+    [
+     "Contact the referee forbids",
+     1
+    ],
+    [
+     "Cup tilted more than 10\u00b0",
+     1
+    ]
+   ],
+   "mean_time_s": 104
+  },
+  {
+   "level": 3,
+   "name": "Stack, height unknown",
+   "passed": 13,
+   "trials": 24,
+   "rate": 54,
+   "wilson": [
+    35,
+    72
+   ],
+   "target": 95,
+   "previous": 42,
+   "failures": [
+    [
+     "No collision-free pin pose for this stack height",
+     5
+    ],
+    [
+     "Cup more than 15 mm from the coaster centre",
+     4
+    ],
+    [
+     "Contact the referee forbids",
+     1
+    ],
+    [
+     "Pour not 7.0 \u00b1 0.2 s with the cup under the outlet",
+     1
+    ]
+   ],
+   "mean_time_s": 112
+  },
+  {
+   "level": 4,
+   "name": "Lever angle unknown",
+   "passed": 2,
+   "trials": 24,
+   "rate": 8,
+   "wilson": [
+    2,
+    26
+   ],
+   "target": 95,
+   "previous": 21,
+   "failures": [
+    [
+     "Pour not 7.0 \u00b1 0.2 s with the cup under the outlet",
+     9
+    ],
+    [
+     "Dispenser pushed more than 2 mm",
+     7
+    ],
+    [
+     "Cup more than 15 mm from the coaster centre",
+     2
+    ],
+    [
+     "Grasp missed the cup",
+     2
+    ],
+    [
+     "Lever lift IK branch jump",
+     1
+    ],
+    [
+     "Cup tilted more than 10\u00b0",
+     1
+    ]
+   ],
+   "mean_time_s": 70
+  },
+  {
+   "level": 5,
+   "name": "Cup anywhere",
+   "passed": 4,
+   "trials": 24,
+   "rate": 17,
+   "wilson": [
+    7,
+    36
+   ],
+   "target": 90,
+   "previous": 12,
+   "failures": [
+    [
+     "Grasp missed the cup",
+     12
+    ],
+    [
+     "Arms touched each other",
+     4
+    ],
+    [
+     "Fingers jammed on the cup rim",
+     3
+    ],
+    [
+     "Cup more than 15 mm from the coaster centre",
+     1
+    ]
+   ],
+   "mean_time_s": 95
+  }
+ ]
+}

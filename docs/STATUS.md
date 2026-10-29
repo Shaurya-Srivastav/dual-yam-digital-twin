@@ -5,7 +5,7 @@ Simulation only. Nothing has run on the arms.
 | Claim | State |
 |---|---|
 | Nominal Levels 1–5, no randomization | Passing the strict referee on the selftest, as of the last run recorded in `docs/RESULTS.md`. Re-run `python -m sim_station.selftest` after any physics or skill change. |
-| Randomized, 24 trials | 79 / 42 / 42 / 21 / 12 % against targets 98 / 98 / 95 / 95 / 90 %. Not at target. |
+| Randomized, 24 trials | 79 / 54 / 54 / 8 / 17 % against targets 98 / 98 / 95 / 95 / 90 %. Not at target. |
 | Pose-aligned Level 1 replay | The cup is moved to the recorded grasp before playback. A pass is not independent proof of the station layout. |
 | Scene-as-reset replay | Same waypoints, cup left where the level reset put it. Latest selftest: fail, 105.7 mm from the outlet axis and 19.7 mm from the coaster centre. Printed, not part of the exit code. |
 | FK/IK check | This model's forward kinematics against its own inverse kinematics. Not a surveyed hand pose. |
@@ -16,4 +16,4 @@ Simulation only. Nothing has run on the arms.
 
 `python -m sim_station.selftest` exits 0 only when the five nominal levels, the pose-aligned replay and the FK/IK check pass. A green selftest does not update the randomized table.
 
-Public repo: no song files. Dance clips on the project page are silent. Local playback uses files named in `sim_station/audio.py`.
+Public repo: no song files. Local playback uses files named in `sim_station/audio.py`.

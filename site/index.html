@@ -1,254 +1,578 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dual-YAM digital twin</title>
-<meta name="description" content="A MuJoCo simulation of a two-arm cup station. Skills use joint torque and gripper width only. The pour is a timer. Nothing on this page has run on the physical arms.">
+<meta name="description" content="A MuJoCo twin of a two-arm cup station. Five levels of uncertainty, solved from joint torque and gripper width alone. Simulation only.">
 <meta property="og:title" content="Dual-YAM digital twin">
 <meta property="og:description" content="Two robot arms, one dry dispenser, five levels of uncertainty, no cameras.">
+<meta property="og:image" content="videos/level2.jpg">
+<meta name="theme-color" content="#0b0d12">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f4f1ea;--paper:#fbf9f4;--ink:#1b1814;--soft:#3c3832;--muted:#6a635a;--line:#ddd6c8;
-  --accent:#8d3b22;--ok:#1c6b43;--warn:#8a5a12;--bad:#922e2e;
-  --serif:"Iowan Old Style",Palatino,"Palatino Linotype","Book Antiqua",Georgia,serif;
-  --sans:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --bg:#0b0d12;--bg2:#0f1218;--surface:#141821;--surface2:#1a1f2a;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);
+  --text:#eef0f5;--soft:#c5cad5;--muted:#8b93a3;--accent:#7aa2ff;--accent2:#f2a65a;--ok:#4cd38a;--warn:#f2c45a;--bad:#ff6b6b;
+  --glow:rgba(122,162,255,.18);--shadow:0 20px 60px rgba(0,0,0,.45);
+  --sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r:14px;
+}
+[data-theme=light]{
+  --bg:#f6f7fb;--bg2:#eef0f6;--surface:#ffffff;--surface2:#f3f5fa;--line:rgba(15,20,35,.09);--line2:rgba(15,20,35,.16);
+  --text:#121622;--soft:#323a4c;--muted:#5f687a;--accent:#3b6cf6;--accent2:#c9711d;--ok:#16924f;--warn:#a87a06;--bad:#d03a3a;
+  --glow:rgba(59,108,246,.12);--shadow:0 16px 48px rgba(20,30,60,.12);
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 var(--sans);font-feature-settings:"kern","liga"}
-:focus{outline:none}
-:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.skip{position:absolute;left:12px;top:-40px;background:var(--ink);color:var(--bg);padding:8px 12px;z-index:40}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
+  background:radial-gradient(900px 500px at 85% -10%,var(--glow),transparent 60%),radial-gradient(700px 420px at -10% 30%,rgba(242,166,90,.07),transparent 60%)}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline;text-underline-offset:3px}
+:focus{outline:none}:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
+.skip{position:absolute;left:12px;top:-80px;background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;z-index:60}
 .skip:focus{top:12px}
-a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:3px}
-a:hover{text-decoration-thickness:2px}
-nav{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);border-bottom:1px solid var(--line)}
-nav div{max-width:1080px;margin:0 auto;padding:14px 24px;display:flex;gap:22px;align-items:baseline;flex-wrap:wrap}
-nav strong{margin-right:auto;font-family:var(--serif);font-weight:560;font-size:17px;letter-spacing:-.01em}
-nav a{color:var(--muted);font-size:14px;text-decoration:none}
-nav a:hover{color:var(--ink)}
-main{display:block}
-section{max-width:1080px;margin:0 auto;padding:88px 24px 0}
-.kicker{margin:0 0 14px;color:var(--accent);font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:650}
-h1{font-family:var(--serif);font-weight:500;font-size:clamp(46px,7vw,84px);line-height:.96;letter-spacing:-.03em;margin:0 0 22px;max-width:16ch}
-h2{font-family:var(--serif);font-weight:500;font-size:clamp(32px,4vw,44px);line-height:1.05;letter-spacing:-.02em;margin:0 0 12px}
-h3{font-family:var(--serif);font-weight:560;font-size:22px;line-height:1.2;margin:0 0 8px}
-.lead{font-size:19px;line-height:1.55;color:var(--soft);max-width:42rem}
-.muted{color:var(--muted)}.small{font-size:14.5px;line-height:1.55}
-.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
-.btn{display:inline-block;padding:11px 16px;border:1px solid var(--ink);background:transparent;color:var(--ink);font:600 14px/1 var(--sans);text-decoration:none;cursor:pointer}
-.btn.p{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.btn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
-.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:28px;padding-top:18px;border-top:1px solid var(--line)}
-.chip{font-size:12.5px;letter-spacing:.02em;color:var(--soft)}
-.chip:not(:last-child)::after{content:"·";margin-left:8px;color:var(--line)}
-.grid{display:grid;gap:28px 22px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));margin-top:28px}
-.card{background:var(--paper);border:1px solid var(--line);display:flex;flex-direction:column}
-.vid{position:relative;background:#111;aspect-ratio:16/9}
-.vid video{width:100%;height:100%;display:block;object-fit:cover}
-.vid .play{position:absolute;inset:0;border:0;background:linear-gradient(transparent 50%,rgba(0,0,0,.45));color:#fff;cursor:pointer;display:grid;place-items:end start;padding:14px;font:600 13px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase}
-.vid .play:hover,.vid .play:focus-visible{background:linear-gradient(transparent 40%,rgba(141,59,34,.72))}
-.card .body{padding:16px 16px 18px}
-.tag{display:inline-block;margin-top:10px;font-size:12px;letter-spacing:.04em;text-transform:uppercase;font-weight:650}
-.tag.ok{color:var(--ok)}.tag.warn{color:var(--warn)}.tag.bad{color:var(--bad)}
-dialog{border:0;padding:0;width:min(1040px,94vw);background:var(--paper);color:var(--ink);box-shadow:0 24px 80px rgba(27,24,20,.28)}
-dialog::backdrop{background:rgba(27,24,20,.72)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+/* nav */
+nav{position:sticky;top:0;z-index:40;backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);
+  background:color-mix(in srgb,var(--bg) 72%,transparent);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:18px;height:62px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.01em;color:var(--text);white-space:nowrap}
+.brand:hover{text-decoration:none}
+.logo{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center}
+.logo svg{width:16px;height:16px}
+.links{display:flex;gap:4px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+.links::-webkit-scrollbar{display:none}
+.links a{color:var(--muted);font-size:14px;padding:7px 11px;border-radius:8px;white-space:nowrap;transition:color .2s,background .2s}
+.links a:hover,.links a.on{color:var(--text);background:var(--surface2);text-decoration:none}
+.iconbtn{border:1px solid var(--line2);background:var(--surface);color:var(--text);width:36px;height:36px;border-radius:10px;display:grid;place-items:center;cursor:pointer;flex:none;transition:border-color .2s,transform .2s}
+.iconbtn:hover{border-color:var(--accent);transform:translateY(-1px)}
+.iconbtn svg{width:17px;height:17px}
+/* type */
+section{padding:96px 0 0}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font:600 12px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.eyebrow::before{content:"";width:18px;height:1px;background:currentColor}
+h1{font-size:clamp(40px,5.6vw,68px);line-height:1.02;letter-spacing:-.035em;margin:18px 0 20px;font-weight:700}
+h1 .grad{background:linear-gradient(100deg,var(--text) 10%,var(--accent) 55%,var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{font-size:clamp(30px,3.6vw,42px);line-height:1.1;letter-spacing:-.03em;margin:12px 0 12px;font-weight:700}
+h3{font-size:19px;line-height:1.3;margin:0 0 6px;font-weight:650;letter-spacing:-.01em}
+.lead{font-size:18px;color:var(--soft);max-width:44rem;margin:0}
+.muted{color:var(--muted)}.small{font-size:14px}
+.mono{font-family:var(--mono)}
+/* buttons */
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:12px;font:600 14.5px/1 var(--sans);border:1px solid var(--line2);color:var(--text);background:var(--surface);cursor:pointer;transition:transform .2s,border-color .2s,background .2s}
+.btn:hover{text-decoration:none;transform:translateY(-2px);border-color:var(--accent)}
+.btn.p{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.p:hover{filter:brightness(1.08)}
+.btn svg{width:16px;height:16px}
+.badge{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:999px;border:1px solid var(--line2);background:var(--surface);font-size:12.5px;color:var(--soft)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 25%,transparent)}
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:52px;align-items:center;padding-top:64px}
+.frame{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line2);box-shadow:var(--shadow);background:#000}
+.frame video{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
+.frame .live{position:absolute;left:14px;top:14px;display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(10,12,18,.66);backdrop-filter:blur(8px);color:#fff;font-size:12px;font-weight:600}
+.frame .live i{width:7px;height:7px;border-radius:50%;background:#ff5d5d;animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.herocap{margin-top:12px;font-size:13.5px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:56px}
+.stat{padding:18px 18px 16px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.stat b{display:block;font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.stat>span{font-size:13px;color:var(--muted)}
+/* level explorer */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:28px}
+.tab{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--soft);cursor:pointer;min-width:150px;text-align:left;transition:border-color .2s,background .2s,transform .2s;font:inherit}
+.tab:hover{transform:translateY(-1px);border-color:var(--line2)}
+.tab[aria-selected=true]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface));color:var(--text)}
+.tab small{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.tab span{font-weight:600;font-size:14.5px}
+.explorer{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:18px;margin-top:18px}
+.player{border:1px solid var(--line);border-radius:18px;background:var(--surface);overflow:hidden}
+.player video{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#000;cursor:pointer}
+.timeline{position:relative;height:30px;margin:0 16px;cursor:pointer}
+.timeline .track{position:absolute;left:0;right:0;top:13px;height:4px;border-radius:4px;background:var(--line2)}
+.timeline .fill{position:absolute;left:0;top:13px;height:4px;border-radius:4px;background:var(--accent);width:0}
+.timeline .tick{position:absolute;top:9px;width:2px;height:12px;border-radius:2px;opacity:.75}
+.ctrl{display:flex;align-items:center;gap:10px;padding:2px 16px 14px;flex-wrap:wrap}
+.ctrl .t{font:500 13px var(--mono);color:var(--muted);min-width:110px}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--muted);padding:7px 10px;font:600 12.5px var(--sans);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--surface2);color:var(--text)}
+.ctrl .sp{margin-left:auto}
+.side{border:1px solid var(--line);border-radius:18px;background:var(--surface);display:flex;flex-direction:column;min-height:0;max-height:640px}
+.side header{padding:18px 18px 12px;border-bottom:1px solid var(--line)}
+.side header p{margin:6px 0 0;font-size:14px;color:var(--soft)}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.metric{padding:10px;border-radius:10px;background:var(--surface2)}
+.metric b{display:block;font:600 16px var(--mono)}
+.metric span{font-size:11.5px;color:var(--muted)}
+.chapters{list-style:none;margin:0;padding:8px;overflow:auto;flex:1}
+.chapters li button{width:100%;display:grid;grid-template-columns:52px 1fr;gap:8px;align-items:start;text-align:left;padding:8px 10px;border-radius:10px;border:0;background:transparent;color:var(--soft);font:inherit;font-size:13.5px;line-height:1.4;cursor:pointer}
+.chapters li button:hover{background:var(--surface2)}
+.chapters li button.on{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--text)}
+.chapters .ts{font:500 12px var(--mono);color:var(--muted);padding-top:2px}
+.chapters .arm{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:5px;margin-right:6px;vertical-align:1px}
+.arm.cup{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent)}
+.arm.tap{background:color-mix(in srgb,var(--accent2) 22%,transparent);color:var(--accent2)}
+.arm.both{background:var(--surface2);color:var(--muted)}
+.chgroup{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:12px 10px 4px}
+/* cards */
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:28px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:28px}
+.card{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden;transition:transform .25s,border-color .25s,box-shadow .25s}
+.card:hover{transform:translateY(-3px);border-color:var(--line2);box-shadow:var(--shadow)}
+.thumb{position:relative;aspect-ratio:16/9;background:#000;cursor:pointer;overflow:hidden;display:block;width:100%;border:0;padding:0}
+.thumb img,.thumb video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .5s}
+.card:hover .thumb img{transform:scale(1.03)}
+.thumb .pl{position:absolute;inset:0;display:grid;place-items:center}
+.thumb .pl span{width:56px;height:56px;border-radius:50%;background:rgba(10,12,18,.6);backdrop-filter:blur(6px);display:grid;place-items:center;transition:transform .2s,background .2s}
+.thumb .pl span::before{content:"";margin-left:4px;border-style:solid;border-width:10px 0 10px 16px;border-color:transparent transparent transparent #fff}
+.thumb:hover .pl span{transform:scale(1.08);background:var(--accent)}
+.card .body{padding:16px 18px 18px}
+.card .body p{margin:6px 0 0;font-size:14px;color:var(--muted)}
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:30px;position:relative}
+.pipe::before{content:"";position:absolute;left:5%;right:5%;top:27px;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:.35}
+.node{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;border:0;background:transparent;color:var(--muted);cursor:pointer;font:inherit;padding:0 4px}
+.node i{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--line2);font:700 15px var(--mono);color:var(--text);transition:all .25s}
+.node span{font-size:13.5px;font-weight:600}
+.node:hover i{border-color:var(--accent)}
+.node[aria-selected=true] i{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 0 6px var(--glow)}
+.node[aria-selected=true] span{color:var(--text)}
+.pipedetail{margin-top:20px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:22px 24px;min-height:120px}
+.pipedetail p{margin:6px 0 0;color:var(--soft)}
+/* accordions */
+details.acc{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);transition:border-color .2s}
+details.acc[open]{border-color:var(--line2)}
+details.acc summary{list-style:none;cursor:pointer;padding:18px 20px;display:flex;gap:14px;align-items:flex-start}
+details.acc summary::-webkit-details-marker{display:none}
+details.acc summary .ic{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--surface2);color:var(--accent)}
+details.acc summary .ic svg{width:19px;height:19px}
+details.acc summary .chev{margin-left:auto;flex:none;width:22px;height:22px;color:var(--muted);transition:transform .25s}
+details.acc[open] summary .chev{transform:rotate(180deg)}
+details.acc summary p{margin:4px 0 0;font-size:14px;color:var(--muted)}
+details.acc .in{padding:0 20px 20px 72px;color:var(--soft);font-size:14.5px}
+details.acc .in ul{margin:6px 0 0;padding-left:18px}details.acc .in li{margin:6px 0}
+.flipsvg{width:100%;max-width:520px;height:auto;margin:6px 0 4px;display:block}
+/* results */
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:18px;align-items:center}
+.legend i{display:inline-block;vertical-align:-1px;margin-right:6px}
+.chart{margin-top:14px;border:1px solid var(--line);border-radius:18px;background:var(--surface);padding:8px}
+.row{border-radius:12px}
+.row>button{width:100%;display:grid;grid-template-columns:220px minmax(0,1fr) 72px 24px;gap:16px;align-items:center;padding:14px 14px;border:0;background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer;border-radius:12px}
+.row>button:hover{background:var(--surface2)}
+.row .nm small{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.row .nm b{font-weight:600;font-size:14.5px}
+.bararea{position:relative;height:30px}
+.bararea .bg{position:absolute;inset:11px 0;border-radius:6px;background:var(--surface2)}
+.bararea .val{position:absolute;left:0;top:11px;height:8px;border-radius:6px;width:0;transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+.bararea .ci{position:absolute;top:14px;height:2px;background:var(--text);opacity:.5}
+.bararea .ci::before,.bararea .ci::after{content:"";position:absolute;top:-4px;width:2px;height:10px;background:var(--text)}
+.bararea .ci::before{left:0}.bararea .ci::after{right:0}
+.bararea .tg{position:absolute;top:4px;width:2px;height:22px;background:var(--ok);border-radius:2px}
+.bararea .pv{position:absolute;top:8px;width:10px;height:14px;margin-left:-5px;border:2px solid var(--muted);border-radius:3px;opacity:.8;transition:opacity .3s}
+.chart.nopv .pv{opacity:0}
+.row .pct{font:600 18px var(--mono);text-align:right}
+.row .chev{width:20px;height:20px;color:var(--muted);transition:transform .25s}
+.row.open .chev{transform:rotate(180deg)}
+.row .more{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s}
+.row.open .more{grid-template-rows:1fr}
+.row .more>div{overflow:hidden}
+.fails{padding:2px 14px 16px 250px;display:grid;gap:8px}
+.fail{display:grid;grid-template-columns:minmax(0,1fr) 140px 30px;gap:12px;align-items:center;font-size:13.5px;color:var(--soft)}
+.fail .fb{height:6px;border-radius:4px;background:var(--surface2);position:relative}
+.fail .fb i{position:absolute;inset:0 auto 0 0;border-radius:4px;background:var(--bad);opacity:.85}
+.fail b{font:600 13px var(--mono);text-align:right}
+.toggle{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--muted);user-select:none}
+.toggle input{appearance:none;width:36px;height:20px;border-radius:999px;background:var(--line2);position:relative;cursor:pointer;transition:background .2s;margin:0}
+.toggle input::after{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle input:checked{background:var(--accent)}.toggle input:checked::after{transform:translateX(16px)}
+.issues{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:22px}
+.issue{border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:12px;background:var(--surface);padding:14px 16px}
+.issue.w{border-left-color:var(--warn)}
+.issue h4{margin:0 0 4px;font-size:15px;font-weight:650}
+.issue p{margin:0;font-size:14px;color:var(--muted)}
+/* papers */
+.paper{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:22px}
+.paper ol{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:12px;counter-reset:p}
+.paper li{counter-increment:p;display:grid;grid-template-columns:28px 1fr;gap:10px;font-size:14px;color:var(--muted)}
+.paper li::before{content:counter(p);width:24px;height:24px;border-radius:7px;background:var(--surface2);display:grid;place-items:center;font:600 12px var(--mono);color:var(--soft)}
+.paper li a{color:var(--text);font-weight:600}
+.paper .here{margin-top:16px;padding:12px 14px;border-radius:10px;background:var(--surface2);font-size:14px;color:var(--soft)}
+.paper .here b{color:var(--accent)}
+/* checks */
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:28px}
+.kpi{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:20px}
+.kpi .big{font:600 30px var(--mono);letter-spacing:-.02em;margin:6px 0 4px;color:var(--ok)}
+.kpi p{margin:6px 0 0;font-size:14px;color:var(--muted)}
+/* code */
+.code{position:relative;margin-top:24px;border:1px solid var(--line);border-radius:var(--r);background:#0a0c10;overflow:hidden}
+.code pre{margin:0;padding:20px 22px;overflow:auto;font:13.5px/1.75 var(--mono);color:#dfe4ee}
+.code pre .c{color:#6f7a8e}
+.code .copy{position:absolute;right:12px;top:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#dfe4ee;border-radius:9px;padding:6px 11px;font:600 12.5px var(--sans);cursor:pointer}
+.code .copy:hover{border-color:#7aa2ff}
+footer{margin-top:110px;border-top:1px solid var(--line);padding:28px 0 60px;color:var(--muted);font-size:14px}
+footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between}
+/* dialog */
+dialog{border:0;padding:0;width:min(1060px,94vw);background:var(--surface);color:var(--text);border-radius:18px;box-shadow:0 30px 100px rgba(0,0,0,.6);overflow:hidden}
+dialog::backdrop{background:rgba(5,7,12,.78);backdrop-filter:blur(4px)}
 dialog video{width:100%;display:block;background:#000}
-dialog .cap{padding:16px 18px 20px}
-dialog .cap button{float:right;background:transparent;color:var(--ink);border:1px solid var(--line);padding:6px 12px;cursor:pointer;font:inherit}
-.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0;margin-top:28px;border-top:1px solid var(--line);border-left:1px solid var(--line)}
-.flow div{padding:16px 16px 18px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--paper)}
-.flow div b{display:block;color:var(--accent);font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;font-family:var(--sans)}
-.cols{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:28px}
-.panel{background:var(--paper);border:1px solid var(--line);padding:18px 20px 8px}
-table{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
-th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
-th{color:var(--muted);font-weight:550;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
-.bar{height:3px;background:var(--line);min-width:88px;margin-top:8px}.bar i{display:block;height:100%}
-ul{padding-left:18px;margin:8px 0 14px}li{margin:5px 0;color:var(--soft)}
-code{font-family:var(--mono);font-size:.86em;background:#efeae1;padding:1px 5px}
-pre{background:#1b1814;color:#f4f1ea;padding:18px 18px;overflow:auto;font:13.5px/1.6 var(--mono)}
-footer{max-width:1080px;margin:96px auto 0;padding:22px 24px 64px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
-.k{color:var(--ok)}.w{color:var(--warn)}.b{color:var(--bad)}
+dialog .cap{padding:16px 20px 20px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+dialog .cap .grow{flex:1;min-width:240px}
+dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
+/* reveal */
+.rv{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
+.rv.in{opacity:1;transform:none}
+@media (max-width:980px){
+  .hero{grid-template-columns:1fr;gap:34px;padding-top:40px}
+  .explorer{grid-template-columns:1fr}.side{max-height:460px}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pipe{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:22px}.pipe::before{display:none}
+  .row>button{grid-template-columns:150px minmax(0,1fr) 56px 20px;gap:10px}
+  .fails{padding-left:14px}
+  .kpis,.issues,.grid2{grid-template-columns:1fr}
+}
+@media (max-width:620px){
+  .grid3{grid-template-columns:1fr}.links{display:none}
+  .tab{min-width:0;flex:1 1 140px}
+  .row>button{grid-template-columns:1fr 54px 18px}.bararea{grid-column:1/-1;grid-row:2}
+  .fail{grid-template-columns:1fr 80px 24px}
+  details.acc .in{padding-left:20px}
+}
 @media (prefers-reduced-motion:reduce){
-  html{scroll-behavior:auto}
-  *,*::before,*::after{animation:none !important;transition:none !important}
+  html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}
 }
 </style>
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
-<nav><div><strong>Dual-YAM digital twin</strong><a href="#papers">Papers</a><a href="#levels">Levels</a><a href="#dance">Dance</a><a href="#how">How it works</a><a href="#status">Status</a><a href="#proof">Checks</a><a href="#run">Run it</a><a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">GitHub</a></div></nav>
+<nav aria-label="Main"><div class="wrap">
+  <a class="brand" href="#top"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M4 20V11l6-5 4 4"/><path d="M20 20v-7l-4-4"/><circle cx="14" cy="10" r="1.6" fill="#fff"/></svg></span>Dual-YAM digital twin</a>
+  <div class="links" id="links"><a href="#levels">Levels</a><a href="#how">How it works</a><a href="#results">Results</a><a href="#papers">Papers</a><a href="#dance">Dance</a><a href="#run">Run it</a></div>
+  <button class="iconbtn" id="theme" type="button" aria-label="Switch between dark and light theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+  <a class="iconbtn" href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin" aria-label="Source code on GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg></a>
+</div></nav>
+
 <main id="content">
-<section style="padding-top:72px">
-  <p class="kicker">Simulation only · nothing here has run on the arms</p>
-  <h1>Two arms. One dry dispenser. No cameras.</h1>
-  <p class="lead">A MuJoCo simulation of a two-arm (I2RT YAM) cup station. One arm brings a paper or plastic cup under the spout, the other lifts a 360° lever, and a timer counts 7 seconds. No water is in the model. The cup is then served into a coaster. Skills read joint position, velocity, torque and gripper width. Nothing on this page has been run on the physical arms.</p>
-  <div class="actions"><a class="btn p" href="#levels">Watch the five levels</a><a class="btn" href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">Source code</a><a class="btn" href="#run">Run the dashboard</a></div>
-  <div class="chips"><span class="chip">MuJoCo 3</span><span class="chip">MIT-mode PD + gravity feed-forward</span><span class="chip">torque-residual contact sensing</span><span class="chip">mink IK</span><span class="chip">set-membership cup localisation</span><span class="chip">beat tracking</span><span class="chip">Monte Carlo referee</span></div>
-</section>
-
-<section id="papers" style="padding-top:48px">
-  <h2>The papers this is built on</h2>
-  <p class="lead" style="font-size:17px">The skills are blind on purpose. These are the papers that say how to localise and manipulate from touch and joint torque alone, and what this twin actually took from each one. Full notes are in <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin/blob/main/docs/RESEARCH.md">docs/RESEARCH.md</a>.</p>
-  <div class="cols">
-    <div class="panel"><h3>Finding a cup by touch</h3>
-      <ul class="small">
-        <li><a href="https://doi.org/10.1109/tro.2017.2707092">Memory Unscented Particle Filter for 6-DOF Tactile Localization</a> — Vezzani, Pattacini, Battistelli, Chisci, Natale, IEEE Transactions on Robotics, 2017. <a href="https://arxiv.org/abs/1607.02757">arXiv:1607.02757</a>. A particle belief over object pose, updated from contact.</li>
-        <li><a href="https://arxiv.org/abs/2205.04697">An Empirical Evaluation of Various Information Gain Criteria for Active Tactile Action Selection for Pose Estimation</a> — Murali, Dahiya, Kaboli, 2022. <a href="https://ar5iv.labs.arxiv.org/html/2205.04697">HTML</a>. Pick the next touch by how much it should shrink the belief. They report under 1 cm after 15 touches.</li>
-        <li><a href="https://doi.org/10.1109/icra57385.2026.11697596">Touch-Based Object Localisation with Spatially-Aware Belief Entropy Estimation</a> — Brudermüller, Jankowski, Toussaint, Hawes, ICRA 2026. Touch-only global localisation, then a grasp.</li>
-      </ul>
-      <p class="small muted">What runs here: every peck rules out cup centres the arm and cup models cannot explain (the hard-likelihood, set-membership version of that belief). The next peck is the one that splits the centres still in play about in half. It is not a particle filter, and it does not compute expected entropy over a full pose distribution.</p>
+<div class="wrap" id="top">
+  <div class="hero">
+    <div class="rv">
+      <span class="badge"><span class="dot"></span>Simulation only · not yet run on the physical arms</span>
+      <h1><span class="grad">Two arms. One dispenser. No cameras.</span></h1>
+      <p class="lead">A MuJoCo digital twin of a two-arm I2RT YAM cup station. One arm brings a paper or plastic cup under the spout, the other lifts a 360° lever for a timed 7-second pour, and the cup is served into a coaster. Every skill works from joint position, velocity, torque and gripper width alone.</p>
+      <div class="btns"><a class="btn p" href="#levels"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Explore the five levels</a><a class="btn" href="#results">See the results</a><a class="btn" href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">Source</a></div>
     </div>
-    <div class="panel"><h3>Finding a handle without moving it</h3>
-      <ul class="small">
-        <li><a href="https://arxiv.org/abs/2509.12969">Underactuated Robotic Hand with Grasp State Estimation Using Tendon-Based Proprioception</a> — Lee, Park, Cho, 2025. <a href="https://arxiv.org/html/2509.12969v2">HTML</a>. Pause the first finger that touches, so the object is not pushed before the grasp is set.</li>
-        <li><a href="https://tlips.be/revisiting-proprioception-for-articulated-manipulation/">Revisiting Proprioceptive Sensing for Articulated Object Manipulation</a> — Lips and wyffels, ICRA 2023 workshop. Estimate a joint from the gripper pose while in contact. Slip between gripper and handle is the failure they name.</li>
-        <li><a href="https://kormushev.com/papers/Jamali_OCEANS-2013.pdf">Contact State Estimation using Machine Learning</a> — Jamali, Kormushev, Caldwell, OCEANS 2013. <a href="https://doi.org/10.23919/oceans.2013.6740992">DOI</a>. Classify no contact, on-axis, and off-centre contact on a T-bar valve from force and torque.</li>
-      </ul>
-      <p class="small muted">What runs here: the tap arm closes on the centre of the knob and stops at a 20 mm gap, so the stem is felt and not spun. It then closes at points around a 24 mm circle. A close that stalls with the handle in the jaws is the radius; an empty close is not. That is a contact search, not a learned classifier, and it does not estimate yaw from the shape of one touch.</p>
+    <figure class="rv" style="margin:0">
+      <div class="frame"><video src="videos/hero_flip.mp4" poster="videos/level2.jpg" autoplay muted loop playsinline preload="auto" aria-label="Level 2: one arm takes the top cup off the stack upside down and rolls it upright"></video><div class="live"><i></i>Level 2 · real time</div></div>
+      <figcaption class="herocap">One arm grasps the top cup upside down while the other pins the stack. A single wrist roll brings the cup up upright, ready to pour. No hand-off, no set-down.</figcaption>
+    </figure>
+  </div>
+  <div class="stats rv">
+    <div class="stat"><b><span data-count="5">0</span>/5</b><span>levels pass every referee check (nominal run)</span></div>
+    <div class="stat"><b><span data-count="1">0</span> arm</b><span>takes the cup from stack to coaster in Levels 2 and 3</span></div>
+    <div class="stat"><b><span data-count="120">0</span></b><span>randomized trials behind the results chart</span></div>
+    <div class="stat"><b><span data-count="0">0</span> cameras</b><span>contact is felt from joint-torque residuals</span></div>
+  </div>
+</div>
+
+<section id="levels"><div class="wrap">
+  <div class="rv"><span class="eyebrow">The five levels</span>
+  <h2>Each level adds one unknown</h2>
+  <p class="lead">Pick a level, then click any step to jump to it. Each video is a full nominal run rendered straight from the simulation, and the step names are the executor's own.</p></div>
+  <div class="tabs rv" role="tablist" aria-label="Levels" id="tabs"></div>
+  <div class="explorer rv">
+    <div class="player">
+      <video id="pv" playsinline muted preload="metadata"></video>
+      <div class="timeline" id="tl" role="slider" aria-label="Seek" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="track"></div><div class="fill" id="tlf"></div></div>
+      <div class="ctrl">
+        <button class="iconbtn" id="pp" type="button" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        <span class="t" id="tt">0:00 / 0:00</span>
+        <span class="small muted" id="cur"></span>
+        <div class="seg sp" role="group" aria-label="Playback speed" id="speed"><button type="button" data-r="0.5">0.5×</button><button type="button" data-r="1" aria-pressed="true">1×</button><button type="button" data-r="2">2×</button><button type="button" data-r="4">4×</button></div>
+        <button class="iconbtn" id="fs" type="button" aria-label="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      </div>
     </div>
-    <div class="panel"><h3>Turning a cup over with one arm</h3>
-      <ul class="small">
-        <li><a href="https://arxiv.org/abs/2210.05068">In-Hand Gravitational Pivoting Using Tactile Sensing</a> — Toskov, Newbury, Mukadam, Kulić, Cosgun, CoRL 2022. <a href="https://ar5iv.labs.arxiv.org/html/2210.05068">HTML</a>. Let a held object rotate in a parallel gripper under gravity, tracked from touch.</li>
-      </ul>
-      <p class="small muted">What runs here is not that method. The wrist is turned to the flip attitude before the fingers close, the cup is lifted clear of the stack, and one Cartesian roll turns it upright. The attitude came from an inverse-kinematics search, not from the paper. Gravitational pivoting is the alternative that was not used: it needs slip inside the fingers, and this grasp is meant to hold.</p>
-    </div>
+    <aside class="side">
+      <header><h3 id="lt"></h3><p id="ld"></p><div class="metrics" id="lm"></div></header>
+      <ol class="chapters" id="ch" aria-label="Steps"></ol>
+    </aside>
   </div>
-</section>
+</div></section>
 
-<section id="levels">
-  <h2>The five levels</h2>
-  <p class="muted">Rendered straight from the simulation, captions are the executor's own step names. Click a video to open it full size with controls.</p>
-  <div class="grid" id="levelGrid"></div>
-</section>
-
-<section id="dance">
-  <h2>Dance mode</h2>
-  <p class="lead" style="font-size:17px">The live dashboard plays the audio file and reports its clock. The server tracks tempo, beats, downbeats and loudness from that audio and poses both arms from phase-locked moves: sway, pump, wave, circle, point and clap, sized by the song's energy. The clips here carry no audio track: owning a copy of a song does not give the right to republish it, so the recordings are not in the public videos, the repo or this site. To hear them, open a clip and press <b>Play my own copy</b>: pick the song file on your computer and the page plays it in sync with the arms, without uploading it. The dots are the tracked beat. The local dashboard does the same from files on that machine when you press Start dance.</p>
-  <div class="grid" id="danceGrid"></div>
-</section>
-
-<section id="how">
-  <h2>How it works</h2>
-  <div class="flow">
-    <div><b>1 · Plant</b>1 kHz MuJoCo, MIT-style law τ = kp(q*−q) + kd(q̇*−q̇) + gravity. Friction, mass, gains, base pose, sensor noise and delay are randomized per trial; power-up calibration fits the gravity feed-forward from position sag.</div>
-    <div><b>2 · Sense</b>Contact is the torque residual after the controller's own gravity and friction model, mapped to a Cartesian force with −pinv(Jᵀ). Guards use force steps, never a true contact flag.</div>
-    <div><b>3 · Plan</b>Strict mink IK, min-jerk synchronized trajectories, Cartesian lines for the last centimetres, collision checks against the bench, the dispenser and the other arm.</div>
-    <div><b>4 · Skills</b>Generators, one yield per 2 ms tick: side grasp, spout insertion, lever routine, coaster place, pecks, handle search, one-arm flip. Failures are loud.</div>
-    <div><b>5 · Levels</b>A dependency graph over two arm lanes. The tap arm moves to the lever while the cup is still being carried.</div>
-    <div><b>6 · Referee</b>Only the referee reads true poses: upright, centred, 7.0 s pour with the cup under the outlet, dispenser still, no collisions, arms at rest.</div>
+<section id="how"><div class="wrap">
+  <div class="rv"><span class="eyebrow">How it works</span>
+  <h2>From joint torque to a served cup</h2>
+  <p class="lead">Six layers, and only the last one may look at where things really are. Click a layer to see what it does.</p></div>
+  <div class="pipe rv" role="tablist" aria-label="Pipeline" id="pipe"></div>
+  <div class="pipedetail rv" id="pd" role="tabpanel" aria-live="polite"></div>
+  <div class="grid2" style="margin-top:22px;align-items:start">
+    <details class="acc rv" open>
+      <summary><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5"/></svg></span><div><h3>The one-arm flip</h3><p>Grasp upside down, roll the wrist back, pour.</p></div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="in">
+        <svg class="flipsvg" viewBox="0 0 520 150" role="img" aria-label="Three stages: hand upside down holding the inverted cup, wrist roll of half a turn, cup upright in the normal grip">
+          <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+          <g fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted)">
+            <path d="M58 40h44l-7 70H65z" fill="var(--surface2)"/><rect x="40" y="62" width="10" height="26" rx="3" fill="var(--accent)" stroke="none"/><rect x="110" y="62" width="10" height="26" rx="3" fill="var(--accent)" stroke="none"/><path d="M80 128v-8" /><text x="80" y="146" text-anchor="middle" fill="currentColor" stroke="none" font-size="12" font-family="Inter">1 · grasp, hand upside down</text>
+            <path d="M175 75h60" marker-end="url(#ar)"/><path d="M205 52a22 22 0 1 1-1 0" stroke="var(--accent2)" marker-end="url(#ar)"/><text x="205" y="146" text-anchor="middle" fill="currentColor" stroke="none" font-size="12" font-family="Inter">2 · roll the wrist back</text>
+            <path d="M265 75h60" marker-end="url(#ar)"/>
+            <path d="M357 110h44l7-70h-58z" fill="var(--surface2)"/><rect x="340" y="62" width="10" height="26" rx="3" fill="var(--accent)" stroke="none"/><rect x="410" y="62" width="10" height="26" rx="3" fill="var(--accent)" stroke="none"/><path d="M379 32v-10" marker-end="url(#ar)" stroke="var(--ok)"/><text x="380" y="146" text-anchor="middle" fill="currentColor" stroke="none" font-size="12" font-family="Inter">3 · upright, normal grip</text>
+          </g>
+        </svg>
+        <ul>
+          <li>The cup hand arrives with its wrist rolled half a turn the other way and closes on the middle of the inverted top cup, the same band an upright cup is carried by.</li>
+          <li>The other arm pins the stack while the top cup is wiggled and pulled free. The pull force collapsing is the signal that the nested cups let go.</li>
+          <li>The hand rises clear and rolls the wrist back to its normal position. The cup comes up upright and goes straight to the spout. It is never handed over or set down.</li>
+          <li>A level hand-up grasp at the stack would put wrist joint 5 on its stop, so the grasp dips 8°. That leaves a 16° lean after the roll, which the carry to the spout takes out.</li>
+        </ul>
+      </div>
+    </details>
+    <details class="acc rv">
+      <summary><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/></svg></span><div><h3>Finding the lever without moving it</h3><p>Close on the knob, then close around the circle.</p></div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="in"><ul>
+        <li>The tap arm closes on the centre of the knob and stops at a 20 mm gap. That confirms the stem without spinning it.</li>
+        <li>It then closes at points around a 24 mm circle, jaws held at 50 mm so the pads never reach the tank. A stall near 15 mm with a few newtons is the handle; a close on nothing is empty air.</li>
+        <li>The jaws can only reach the radii on the open side of the tank. If the handle lies behind it, a fingertip sweeps the circle until it touches the handle and pushes it to the pour angle.</li>
+      </ul></div>
+    </details>
+    <details class="acc rv">
+      <summary><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16v16H4z" stroke-dasharray="2 3"/><circle cx="14" cy="10" r="3"/></svg></span><div><h3>Finding the cup without cameras</h3><p>Peck a grid, then fit where the cup must be.</p></div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="in"><ul>
+        <li>Open pads stamp a coarse grid from above until something stands up. A miss stops 8 cm above the mat, so the wrist never lands on the cup.</li>
+        <li>Every peck rules out the cup centres the arm and cup models cannot explain (set-membership). The next peck is the one that splits the remaining centres about in half.</li>
+      </ul></div>
+    </details>
+    <details class="acc rv">
+      <summary><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v16M17 4v16"/><path d="M10 12h4"/></svg></span><div><h3>A side grasp that does not push the cup</h3><p>The stall width says how far off-centre the hand is.</p></div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="in"><ul>
+        <li>The open jaws slide in and comply sideways to contact force, so the funnel pads centre the hand on the cup.</li>
+        <li>When the jaws stall, the width is the chord 2√(r²−s²), which gives the offset s from the cup's axis. Depth is corrected from that alone.</li>
+        <li>Each grip has a force cap. Nothing is welded or snapped into place.</li>
+      </ul></div>
+    </details>
   </div>
-  <div class="cols">
-    <div class="panel"><h3>Finding the lever without moving it</h3><p class="small muted">From <a href="https://arxiv.org/abs/2509.12969">contact-pause grasping</a> and <a href="https://tlips.be/revisiting-proprioception-for-articulated-manipulation/">proprioceptive articulated-object estimation</a>: set the threshold above noise but below breakaway. <a href="https://kormushev.com/papers/Jamali_OCEANS-2013.pdf">Jamali, Kormushev and Caldwell</a> classify T-bar contact the same way, from force rather than vision.</p>
-      <ul class="small"><li>Close on the centre of the knob and stop at a 20 mm gap. That confirms the stem without spinning it.</li><li>Open, then close at points around a 24 mm circle with the jaws at 50 mm. A stall near 15 mm, with a few newtons of force, means the handle is in the jaws. A close on nothing is not.</li><li>If that direction is more than about 8° from the pour angle, the arm opens and closes on the known 45° grip. The handle is not dragged around the knob.</li><li>On the nominal run the handle is already at 45°, so the park is not needed. The old fingertip sweep is not what this build runs.</li></ul></div>
-    <div class="panel"><h3>Finding the cup without cameras</h3><p class="small muted"><a href="https://doi.org/10.1109/tro.2017.2707092">Vezzani et al.</a> keep a belief and update it from contact. <a href="https://arxiv.org/abs/2205.04697">Murali, Dahiya and Kaboli</a> and <a href="https://doi.org/10.1109/icra57385.2026.11697596">Brudermüller et al.</a> choose the next touch by information gain.</p>
-      <ul class="small"><li>Pecks from above on a coarse grid until something stands up. The approach is nearly vertical, and a miss stops at 8 cm, so the wrist housing never drops onto the cup.</li><li>Every peck rules out centres the arm and cup models cannot explain. The next peck splits the centres still in play about in half.</li><li>The fit is set-membership. It is not the particle filter in the 2017 paper, and it does not estimate expected entropy.</li></ul></div>
-    <div class="panel"><h3>The one-arm flip</h3><p class="small muted">The cup hand comes in upside down: the wrist is rolled half a turn the other way, about −65° off the arm's line and 8° down, before the fingers touch the cup. <a href="https://arxiv.org/abs/2210.05068">Gravitational pivoting</a> is the paper alternative; this roll does not use it.</p>
-      <ul class="small"><li>The fingers close on the middle of the inverted top cup. The tap hand pins the rest of the stack while the cup is wiggled and pulled free.</li><li>Then the wrist rolls back half a turn to its normal position, while the hand rises and slides clear of the stack. The cup comes out upright, in the same grip a Level 1 cup is carried in, and goes straight under the spout.</li><li>One arm holds the cup from the stack to the coaster. No hand-off and no set-down. The cup stays clamped and does not tumble. The 8° dip of the grasp leaves the cup leaning 16° after the roll; the carry to the spout pitches the hand to take that out.</li></ul></div>
-    <div class="panel"><h3>Side grasp that does not push the cup</h3><ul class="small"><li>Slides in with open jaws and complies sideways to contact force so the funnel pads centre the hand.</li><li>On closing, the stall width gives the chord 2·√(r²−s²): how far off the cup's axis the hand is, so depth is servoed from touch alone.</li><li>Force caps per grip; no weld, no snap.</li></ul></div>
-  </div>
-</section>
+</div></section>
 
-<section id="status">
-  <h2>Honest status</h2>
-  <p class="muted">Simulation only; nothing has run on the real arms. Randomized trials vary positions ±1 cm, friction and mass ±25–30 %, gains ±10 %, base pose, sensor noise and delay.</p>
-  <div class="cols">
-    <div class="panel"><h3>Randomized success (24 trials per level)</h3>
-      <table><tr><th>Level</th><th>Passed</th><th>Target</th><th></th></tr>
-        <tr><td colspan="4" class="small muted">Nominal runs pass; randomized ones do not reach target. Failure causes are listed below.</td></tr>
-        <tr><td>1 Upright cup</td><td class="b">79 %</td><td>98 %</td><td><div class="bar"><i style="width:79%;background:var(--warn)"></i></div></td></tr>
-        <tr><td>2 Stack, height known</td><td class="b">42 %</td><td>98 %</td><td><div class="bar"><i style="width:42%;background:var(--bad)"></i></div></td></tr>
-        <tr><td>3 Stack, height unknown (3–11 cups)</td><td class="b">42 %</td><td>95 %</td><td><div class="bar"><i style="width:42%;background:var(--bad)"></i></div></td></tr>
-        <tr><td>4 Lever angle unknown</td><td class="b">21 %</td><td>95 %</td><td><div class="bar"><i style="width:21%;background:var(--bad)"></i></div></td></tr>
-        <tr><td>5 Cup anywhere</td><td class="b">12 %</td><td>90 %</td><td><div class="bar"><i style="width:12%;background:var(--bad)"></i></div></td></tr></table>
-      <p class="small muted">24 trials per level, from the earlier Monte Carlo. Not rerun after the one-arm roll back or the circle-of-closes search. Every level misses its target.</p></div>
-    <div class="panel"><h3>Nominal runs (no randomization)</h3>
-      <table><tr><th>Level</th><th>Result</th></tr>
-        <tr><td>1 to 5</td><td><span class="tag ok">pass every referee check</span> nominal paper, seed 0: cups 3.4, 4.9, 4.5, 4.1 and 13.8 mm from the coaster centre, flow 6.94–6.95 s. Levels 2 and 3 use one arm for the cup, start to finish.</td></tr>
-        <tr><td>2, 3</td><td><span class="tag ok">stack never touched by an arm link or housing</span> the stack now stands on the coaster spot, as on the real station</td></tr>
-        <tr><td>Replay</td><td><span class="tag ok">real Level 1 waypoints</span> 0.9 mm from the outlet axis, 8.9 mm from the coaster centre</td></tr></table>
-      <p class="small muted">Referee rule: no arm link or housing may touch a cup or stack; only fingertips may. The nominal runs are the ones in the videos above.</p></div>
+<section id="results"><div class="wrap">
+  <div class="rv"><span class="eyebrow">Results</span>
+  <h2>Every level passes nominally. None meets its randomized target yet.</h2>
+  <p class="lead">24 randomized trials per level, on the code in this build. Positions vary ±1 cm, the coaster ±8 mm without telling the skills, friction and mass ±25–30 %, gains ±10 %, plus base pose, sensor noise and 2–5 tick delay. Every fourth trial uses a plastic cup. Click a level to see why its trials failed.</p></div>
+  <div class="legend rv">
+    <span><i style="width:14px;height:8px;border-radius:4px;background:var(--accent)"></i>pass rate</span>
+    <span><i style="width:14px;height:2px;background:var(--text);opacity:.6"></i>95 % Wilson interval</span>
+    <span><i style="width:2px;height:14px;background:var(--ok)"></i>target</span>
+    <label class="toggle"><input type="checkbox" id="pvt" checked>previous run</label>
   </div>
-  <div class="panel" style="margin-top:18px"><h3>What is still open, and why</h3>
-    <ul>
-      <li><b class="b">Cup more than 15 mm from the coaster centre</b> (the most common failure in Levels 2 and 3, 13 of 48 trials). The coaster is placed up to 8 mm off its nominal spot in randomized trials and the skills are not told where. The dish has about 2 cm of slack around the cup base, which the real replay needs, so it does not centre the cup. A four-sided touch of the dish wall with the held cup was tried and made it worse; it is not in this build.</li>
-      <li><b class="b">Level 4: dispenser pushed more than 2 mm</b> (7 of 24) while the previous fingertip sweep parked the handle, and the lever lift's first IK step jumps 0.13 rad on some draws (3 of 24). Those trials were not rerun after the circle-of-closes search. Making the taped dispenser stiffer fixed the creep but broke the lever close timing in Level 1, so it was taken out.</li>
-      <li><b class="b">Level 3: no collision-free pin approach</b> for some stack heights (5 of 24).</li>
-      <li><b class="b">Level 5:</b> a grid peck that lands inside the cup's open mouth reads as "no cup here", so the scan can miss the cup or fit it in the wrong place and the grasp closes on nothing. That is 8 of 24 failures. The other Level 5 failures are the two arms touching (3), the hand brushing the parked stack (3) and the grasp closing on nothing (3). An offset second pass and model-based pruning were tried and lowered the rate (8 %); they are not in this build.</li>
-      <li><b class="w">Grasp failures in every level</b> (1–2 of 24): the jaws stall on a 61–63 mm chord or close on nothing after nine attempts.</li>
-      <li><b class="w">Not separate implementations:</b> the arms are MuJoCo position actuators with the MIT law packed into the command, not torque actuators; there are no bimanual zone locks beyond the planner's collision checks; there is no <code>GripperForceLimiter</code> class (force caps are inside the grip routine). The Level 5 fit is set-membership with a split-the-candidates rule, not a particle filter or expected entropy.</li>
-      <li><b class="w">Dimensions not measured on the real station:</b> the setup photos are not in the tree and were not used to override the forward-kinematics millimetres. Tap-arm base, dish radius and spigot geometry are inferred.</li>
-      <li><b class="w">No hardware run.</b> <code>SimYam</code> implements the i2rt <code>Robot</code> protocol and the same driver can target <code>get_yam_robot</code>, but it is untested on the arms.</li>
-    </ul></div>
-</section>
+  <div class="chart rv" id="chart"></div>
+  <div class="issues" id="issues"></div>
+</div></section>
 
-<section id="proof">
-  <h2>Recorded-waypoint checks</h2>
-  <p class="muted">These do not show the MuJoCo scene is a 1:1 copy of the physical station. Nothing here has run on the arms.</p>
-  <div class="cols">
-    <div class="panel"><h3>Pose-aligned replay</h3><p>The taught Level 1 waypoints, played through the simulated control loop. Before playback the cup is moved to the recorded grasp, 2 cm off the coaster centre, because that is where the real hand closed. It is not an independent check of the station layout. A second replay that leaves the cup where the level reset put it is printed by <code>python -m sim_station.selftest</code> and is not claimed as a pass.</p>
-      <table><tr><td>Cup to outlet axis</td><td class="k"><b>0.9 mm</b> (limit 5 mm)</td></tr><tr><td>Back in coaster</td><td>8.9 mm from centre</td></tr><tr><td>Max tilt in hand</td><td>6.9°</td></tr></table></div>
-    <div class="panel"><h3>FK/IK self-consistency</h3><p>For all 12 taught Level 1 joint vectors, strict Cartesian IK from unrelated seeds reproduces this model's own forward kinematics of those joints: <b class="k">≤ 0.4 mm and 0.01°</b>. That shows the skills can target a Cartesian pose instead of copying joint angles. It is not a surveyed check of the real hand pose.</p></div>
-    <div class="panel"><h3>Monte Carlo referee</h3><p>Headless runs per level with a failure histogram, success rate, time, peak grip force, maximum tilt and spout clearance: <code>python -m sim_station.evaluate</code>. Results above.</p></div>
+<section id="papers"><div class="wrap">
+  <div class="rv"><span class="eyebrow">Research</span>
+  <h2>The papers behind the blind skills</h2>
+  <p class="lead">What the twin took from each paper, and where it does something simpler. Full notes are in <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin/blob/main/docs/RESEARCH.md">docs/RESEARCH.md</a>.</p></div>
+  <div class="grid2">
+    <div class="paper rv"><h3>Finding a cup by touch</h3><ol>
+      <li><span><a href="https://doi.org/10.1109/tro.2017.2707092">Memory Unscented Particle Filter for 6-DOF Tactile Localization</a><br>Vezzani, Pattacini, Battistelli, Chisci, Natale · IEEE T-RO 2017 · <a href="https://arxiv.org/abs/1607.02757">arXiv</a>. A belief over object pose, updated from contact.</span></li>
+      <li><span><a href="https://arxiv.org/abs/2205.04697">Information Gain Criteria for Active Tactile Action Selection</a><br>Murali, Dahiya, Kaboli · 2022. Choose the next touch by how much it should shrink the belief.</span></li>
+      <li><span><a href="https://doi.org/10.1109/icra57385.2026.11697596">Touch-Based Object Localisation with Spatially-Aware Belief Entropy</a><br>Brudermüller, Jankowski, Toussaint, Hawes · ICRA 2026. Touch-only global localisation, then a grasp.</span></li>
+    </ol><div class="here"><b>What runs here:</b> a set-membership belief. Every peck rules out centres the models cannot explain, and the next peck splits the rest about in half. It is not a particle filter and does not compute expected entropy.</div></div>
+    <div class="paper rv"><h3>Finding a handle without moving it</h3><ol>
+      <li><span><a href="https://arxiv.org/abs/2509.12969">Grasp State Estimation Using Tendon-Based Proprioception</a><br>Lee, Park, Cho · 2025. Pause the first finger that touches, so the object is not pushed before the grasp is set.</span></li>
+      <li><span><a href="https://tlips.be/revisiting-proprioception-for-articulated-manipulation/">Revisiting Proprioceptive Sensing for Articulated Object Manipulation</a><br>Lips, wyffels · ICRA 2023 workshop. Estimate a joint from the gripper pose while in contact.</span></li>
+      <li><span><a href="https://kormushev.com/papers/Jamali_OCEANS-2013.pdf">Contact State Estimation using Machine Learning</a><br>Jamali, Kormushev, Caldwell · OCEANS 2013. Classify contact on a T-bar valve from force and torque.</span></li>
+    </ol><div class="here"><b>What runs here:</b> a contact search. A close that stalls with the handle in the jaws gives its radius; an empty close does not. No learned classifier.</div></div>
   </div>
-</section>
+</div></section>
 
-<section id="run">
-  <h2>Run the live dashboard</h2>
-  <p class="muted">The interactive twin (30–50 fps view with a view cube, step timeline with scrub-back, telemetry charts, belief-vs-truth overlay, Monte Carlo panel and Dance Mode) needs a Python process running MuJoCo, which a static host cannot run.</p>
-<pre>git clone https://github.com/Shaurya-Srivastav/dual-yam-digital-twin
+<section id="proof"><div class="wrap">
+  <div class="rv"><span class="eyebrow">Checks against recorded data</span>
+  <h2>Replaying the taught waypoints</h2>
+  <p class="lead">These show the controller and kinematics agree with the recorded Level 1 teach. They do not show the scene is a surveyed copy of the physical station.</p></div>
+  <div class="kpis">
+    <div class="kpi rv"><span class="small muted">Pose-aligned replay</span><div class="big">0.9 mm</div><span class="small">cup to outlet axis (limit 5 mm)</span><p>The 12 taught Level 1 waypoints played through the simulated control loop. The cup starts at the recorded grasp, so this is not a check of the station layout. Back in the coaster 8.9 mm from centre, max tilt 6.9°.</p></div>
+    <div class="kpi rv"><span class="small muted">FK/IK self-consistency</span><div class="big">≤ 0.4 mm</div><span class="small">and 0.01° on all 12 taught joint vectors</span><p>Strict Cartesian IK from unrelated seeds reproduces the model's own forward kinematics, so skills can target Cartesian poses instead of copying joint angles.</p></div>
+    <div class="kpi rv"><span class="small muted">Monte Carlo referee</span><div class="big">10 checks</div><span class="small">per trial, from true poses only</span><p>Upright within 10°, within 15 mm of the coaster, 7.0 ± 0.2 s of flow with the cup under the outlet, dispenser still, no forbidden contact, stack untouched, arms at rest.</p></div>
+  </div>
+</div></section>
+
+<section id="dance"><div class="wrap">
+  <div class="rv"><span class="eyebrow">Dance mode</span>
+  <h2>The same arms, on the beat</h2>
+  <p class="lead">The server tracks tempo, beats, downbeats and loudness from a song and drives both arms through phase-locked moves (sway, pump, wave, circle, point, clap) scaled by the song's energy. The dots in the corner mark the tracked beat.</p></div>
+  <div class="grid3" id="danceGrid"></div>
+</div></section>
+
+<section id="run"><div class="wrap">
+  <div class="rv"><span class="eyebrow">Run it</span>
+  <h2>The live dashboard</h2>
+  <p class="lead">The interactive twin runs MuJoCo in a Python process: a 30–50 fps view with a view cube, a step timeline you can scrub back through, telemetry, a belief-vs-truth overlay, a Monte Carlo panel and Dance Mode.</p></div>
+  <div class="code rv"><button class="copy" type="button" id="copy">Copy</button><pre id="cmd">git clone https://github.com/Shaurya-Srivastav/dual-yam-digital-twin
 cd dual-yam-digital-twin
-git clone https://github.com/i2rt-robotics/i2rt third_party/i2rt     # arm and gripper models
-pip install -r requirements.txt                                     # Python 3.11; ffmpeg for Dance Mode
-./run_sim.sh                                                        # http://127.0.0.1:8090
-python -m sim_station.selftest                                      # all levels + real-data replay</pre>
-</section>
+git clone https://github.com/i2rt-robotics/i2rt third_party/i2rt   <span class="c"># arm and gripper models</span>
+pip install -r requirements.txt                                   <span class="c"># Python 3.11, ffmpeg for Dance Mode</span>
+./run_sim.sh                                                      <span class="c"># http://127.0.0.1:8090</span>
+python -m sim_station.evaluate --trials 24                        <span class="c"># the randomized results above</span></pre></div>
+</div></section>
 </main>
-<footer>Dual-YAM digital twin · MIT licence · built with MuJoCo and the i2rt SDK · <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">source</a> · <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin/blob/main/docs/RESULTS.md">full results</a> · <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin/blob/main/docs/RESEARCH.md">research notes</a></footer>
 
-<dialog id="dlg" aria-labelledby="dt"><video id="dv" controls playsinline></video><div class="cap"><button type="button" id="dx">Close</button><h3 id="dt"></h3><div class="muted small" id="dd"></div>
-  <div id="own" class="small" style="display:none;margin-top:10px">Have the song? <label class="btn" style="cursor:pointer;padding:5px 12px">Play my own copy<input id="ownf" type="file" accept="audio/*" hidden></label> <span class="muted">The file stays on your computer: it plays in this page in sync with the video and is never uploaded. This site does not host the songs.</span></div>
-  <audio id="oa" preload="auto"></audio></div></dialog>
+<footer><div class="wrap"><span>Dual-YAM digital twin · MIT licence · MuJoCo and the i2rt SDK · simulation only</span><span><a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">Source</a> · <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin/blob/main/docs/RESULTS.md">Full results</a> · <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin/blob/main/docs/RESEARCH.md">Research notes</a></span></div></footer>
+
+<dialog id="dlg" aria-labelledby="dt"><video id="dv" controls playsinline></video>
+  <div class="cap"><div class="grow"><h3 id="dt"></h3><p id="dd"></p></div>
+    <label class="btn" style="padding:9px 14px">Play along with your copy<input id="ownf" type="file" accept="audio/*" hidden></label>
+    <button class="btn" type="button" id="dx" style="padding:9px 14px">Close</button></div>
+  <audio id="oa" preload="auto"></audio></dialog>
 
 <script>
-const LEVELS = [
- ["level1","Level 1 · Upright cup in the coaster","Cup out of the coaster, under the spout, lever lifted for 7 s, back into the coaster.","ok","passes every check"],
- ["level2","Level 2 · Nested stack, height known","Grasp the top cup with the hand upside down, pin the stack and pull it free, then roll the wrist back: the cup comes up upright in the pour grip. One arm, no set-down.","ok","nominal run passes every check, stack untouched"],
- ["level3","Level 3 · Nested stack, height unknown","Peck the stack to count the cups, then the same one-arm roll back as Level 2.","ok","nominal run passes every check, stack untouched"],
- ["level4","Level 4 · Lever angle unknown","Close on the knob, then close around the circle until the handle fills the jaws, and pour.","ok","nominal run passes every check"],
- ["level5","Level 5 · Cup in the search region","Coarse peck grid over the reachable patch of the mat, not the whole mat, then fit where the cup must stand from every peck.","ok","nominal run passes every check"],
+const LEVELS=[
+ {n:1,name:"Upright cup",title:"Level 1 · Upright cup in the coaster",desc:"The cup's position is known. Lift it out of the coaster, slide it under the spout, lift the lever for 7 s, and put it back."},
+ {n:2,name:"Stack, height known",title:"Level 2 · Nested stack, height known",desc:"Grasp the top cup with the hand upside down while the other arm pins the stack, pull it free, then roll the wrist back. The cup comes up upright in the pour grip."},
+ {n:3,name:"Stack, height unknown",title:"Level 3 · Nested stack, 3 to 11 cups",desc:"Peck down on the stack to measure its height and count the cups, then the same one-arm flip as Level 2."},
+ {n:4,name:"Lever angle unknown",title:"Level 4 · Lever angle unknown",desc:"The handle can point anywhere around the valve. Close on the knob, then close around the circle until the handle is between the jaws."},
+ {n:5,name:"Cup anywhere",title:"Level 5 · Cup somewhere on the mat",desc:"Stamp a coarse grid until something stands up, then peck the cup's edges and fit where it must be."},
 ];
-const DANCE = [
- ["dance_rick","Never Gonna Give You Up","Rick Astley · 113 BPM tracked","sway, pump, wave, clap"],
- ["dance_aha","Take On Me","a-ha · 84 BPM tracked, danced on every beat","wave, circle, sway"],
- ["dance_beegees","Stayin' Alive","Bee Gees · 103 BPM tracked","disco point, pump, clap"],
+const DANCE=[["dance_rick","Never Gonna Give You Up","Rick Astley · 113 BPM tracked · sway, pump, wave, clap"],["dance_aha","Take On Me","a-ha · 84 BPM tracked · wave, circle, sway"],["dance_beegees","Stayin' Alive","Bee Gees · 103 BPM tracked · disco point, pump, clap"]];
+const PIPE=[
+ ["Plant","1 kHz MuJoCo with an MIT-style law, τ = kp(q*−q) + kd(q̇*−q̇) + gravity, packed into position actuators. Friction, mass, gains, base pose, sensor noise and delay are randomized per trial. A power-up calibration fits the gravity feed-forward from position sag."],
+ ["Sense","Contact is the torque residual left after the controller's own gravity and friction model, mapped to a Cartesian force with −pinv(Jᵀ). Guards fire on force steps, never on a true contact flag."],
+ ["Plan","Strict mink IK, minimum-jerk synchronized trajectories, and straight Cartesian lines for the last centimetres. Every path is checked against the bench, the dispenser and the other arm before it runs."],
+ ["Skills","Generators that yield once per 2 ms tick: side grasp, unstack, one-arm flip, spout insertion, lever search and lift, coaster place, pecks and fits. A failed check stops the run with its reason."],
+ ["Levels","Each level is a dependency graph over two arm lanes, so the tap arm walks to the lever while the cup is still being carried."],
+ ["Referee","The only code that reads true poses. Ten checks per run: upright, centred, 7.0 s of flow with the cup under the outlet, dispenser still, no forbidden contact, stack untouched, arms at rest."],
 ];
-function card(grid, id, title, desc, tag, tagText){
-  const el=document.createElement("div"); el.className="card";
-  el.innerHTML=`<div class="vid"><video muted loop playsinline preload="metadata" src="videos/${id}.mp4#t=0.8"></video><button type="button" class="play">Play</button></div><div class="body"><h3>${title}</h3><div class="small muted">${desc}</div>${tag?`<div><span class="tag ${tag}">${tagText}</span></div>`:""}</div>`;
-  const v=el.querySelector("video");
-  const reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if(!reduce){el.querySelector(".vid").onmouseenter=()=>v.play().catch(()=>{}); el.querySelector(".vid").onmouseleave=()=>{v.pause();};}
-  el.querySelector(".play").onclick=()=>{const d=document.getElementById("dlg"),dv=document.getElementById("dv");dv.src=`videos/${id}.mp4`;document.getElementById("dt").textContent=title;document.getElementById("dd").textContent=desc;document.getElementById("own").style.display=id.startsWith("dance_")?"block":"none";d.showModal();dv.play().catch(()=>{});};
-  grid.appendChild(el);
+const ISSUES=[
+ ["b","Cup lands more than 15 mm from the coaster centre","The most common failure in Levels 1–3 (11 of 72 trials). The coaster moves up to 8 mm in randomized trials and the skills are not told. The dish has about 2 cm of slack, so it does not centre the cup."],
+ ["b","Level 4: turning the handle moves the dispenser","The search now finds the handle in almost every trial. When the handle lies behind the tank, the fingertip that pushes it round drags the taped dispenser more than 2 mm, and the pour can miss its 7.0 s window. A stiffer dispenser fixed the creep but broke Level 1's lever timing."],
+ ["b","Level 5: the grasp closes on nothing","12 of 24. A peck that lands inside the cup's open mouth reads as \"no cup here\", so the fit can place the cup wrong. The arms also touched in 4 trials."],
+ ["b","Level 3: no pin pose for some stack heights","5 of 24. For some stack heights the tap arm finds no collision-free pose to pin the lower stack."],
+ ["w","Modelling limits","The arms are position actuators with the MIT law packed into the command. Nested cups are tethered, not colliding, so squeezing the top cup's middle does not couple into the cup inside it. Tap-arm base, dish radius and spigot geometry are inferred, not measured."],
+ ["w","Not run on hardware","SimYam implements the i2rt Robot protocol and the same driver can target the real arms, but nothing has run on them. Scene-as-reset replay still fails, and the Python dependencies are not pinned."],
+];
+const $=s=>document.querySelector(s), reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const fmt=t=>{t=Math.max(0,t|0);return Math.floor(t/60)+":"+String(t%60).padStart(2,"0")};
+let RESULTS=null;
+
+/* theme */
+const root=document.documentElement, saved=localStorage.getItem("theme");
+if(saved) root.dataset.theme=saved; else if(matchMedia("(prefers-color-scheme: light)").matches) root.dataset.theme="light";
+$("#theme").onclick=()=>{root.dataset.theme=root.dataset.theme==="dark"?"light":"dark";localStorage.setItem("theme",root.dataset.theme);};
+
+/* reveal + counters */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;e.target.classList.add("in");io.unobserve(e.target);
+  e.target.querySelectorAll("[data-count]").forEach(countUp);
+  if(e.target.id==="chart") e.target.querySelectorAll(".val").forEach(v=>v.style.width=v.dataset.w);}),{threshold:.12});
+function countUp(el){const end=+el.dataset.count;if(reduce||!end){el.textContent=end;return;}const t0=performance.now();
+  const step=t=>{const k=Math.min((t-t0)/1100,1);el.textContent=Math.round(end*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(step);};requestAnimationFrame(step);}
+document.querySelectorAll(".rv").forEach(el=>io.observe(el));
+if(reduce){const h=$(".frame video");h.removeAttribute("autoplay");h.pause();h.controls=true;}
+
+/* nav highlight */
+const secs=[...document.querySelectorAll("main section")];
+addEventListener("scroll",()=>{let id="";for(const s of secs){if(s.getBoundingClientRect().top<120)id=s.id;}
+  document.querySelectorAll("#links a").forEach(a=>a.classList.toggle("on",a.getAttribute("href")==="#"+id));},{passive:true});
+
+/* level explorer */
+const pv=$("#pv"), tabs=$("#tabs"), cache={};
+let cur=null, chapters=[];
+LEVELS.forEach((L,i)=>{const b=document.createElement("button");b.className="tab";b.type="button";b.role="tab";b.id="tab"+L.n;
+  b.setAttribute("aria-selected",i===1);b.setAttribute("aria-controls","pv");
+  b.innerHTML=`<small>Level ${L.n}<span class="tr" data-l="${L.n}"></span></small><span>${L.name}</span>`;
+  b.onclick=()=>select(L.n,true);
+  b.onkeydown=e=>{if(e.key==="ArrowRight"||e.key==="ArrowLeft"){e.preventDefault();const n=((L.n-1+(e.key==="ArrowRight"?1:-1))+5)%5+1;select(n,true);$("#tab"+n).focus();}};
+  tabs.appendChild(b);});
+async function getMeta(n){if(cache[n])return cache[n];try{const r=await fetch(`videos/level${n}.json`);cache[n]=await r.json();}catch(e){cache[n]={chapters:[]};}return cache[n];}
+async function select(n,play){
+  cur=n;const L=LEVELS[n-1];
+  tabs.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t.id==="tab"+n));
+  pv.poster=`videos/level${n}.jpg`;pv.src=`videos/level${n}.mp4`;pv.playbackRate=+($("#speed [aria-pressed=true]").dataset.r);
+  $("#lt").textContent=L.title;$("#ld").textContent=L.desc;
+  const m=await getMeta(n); if(cur!==n) return;
+  chapters=m.chapters||[];
+  const rr=RESULTS&&RESULTS.levels.find(x=>x.level===n);
+  $("#lm").innerHTML=(m.ok!==undefined?`<div class="metric"><b>${m.coaster_offset_mm} mm</b><span>cup from coaster centre</span></div><div class="metric"><b>${m.flow_s} s</b><span>pour (7.0 ± 0.2)</span></div><div class="metric"><b>${rr?rr.rate+" %":Math.round(m.sim_time_s)+" s"}</b><span>${rr?"randomized pass rate":"run time"}</span></div>`:"");
+  const ol=$("#ch");ol.innerHTML="";let g="";
+  chapters.forEach((c,i)=>{if(c.group!==g){g=c.group;const h=document.createElement("li");h.className="chgroup";h.textContent=g;ol.appendChild(h);}
+    const arm=c.id.startsWith("tap.")?"tap":c.id.startsWith("cup.")?"cup":"both";
+    const title=c.title.replace(/^(Cup arm|Tap arm): /,"");
+    const li=document.createElement("li");li.innerHTML=`<button type="button" data-i="${i}"><span class="ts">${fmt(c.t)}</span><span><span class="arm ${arm}">${arm==="both"?"both":arm+" arm"}</span>${title}</span></button>`;
+    li.firstChild.onclick=()=>seekTo(c.t+0.05);ol.appendChild(li);});
+  drawTicks();
+  if(play) pv.play().catch(()=>{});
 }
-LEVELS.forEach(l=>card(document.getElementById("levelGrid"),l[0],l[1],l[2],l[3],l[4]));
-DANCE.forEach(d=>card(document.getElementById("danceGrid"),d[0],d[1],d[2]+" · "+d[3],"",""));
-const dlg=document.getElementById("dlg"),dv=document.getElementById("dv");
-document.getElementById("dx").onclick=()=>dlg.close(); dlg.addEventListener("close",()=>{dv.pause();dv.removeAttribute("src");oa.pause();}); dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close();});
-// Dance clips start 30 s into the song after a 4 s rise into the ready pose (tools/make_videos.py).
-const oa=document.getElementById("oa"), SONG_START=30, RISE=4;
+function seekTo(t){const go=()=>{pv.currentTime=t;pv.play().catch(()=>{});};pv.readyState>=1?go():pv.addEventListener("loadedmetadata",go,{once:true});}
+function drawTicks(){const tl=$("#tl");tl.querySelectorAll(".tick").forEach(t=>t.remove());const d=pv.duration;if(!d||!chapters.length)return;
+  const col={Pick:"var(--accent)",Pour:"var(--accent2)",Serve:"var(--ok)"};
+  chapters.forEach(c=>{const t=document.createElement("div");t.className="tick";t.style.left=(100*c.t/d)+"%";t.style.background=col[c.group]||"var(--muted)";t.title=c.title;tl.appendChild(t);});}
+pv.addEventListener("loadedmetadata",drawTicks);
+pv.addEventListener("timeupdate",()=>{const d=pv.duration||1,t=pv.currentTime;$("#tlf").style.width=(100*t/d)+"%";$("#tt").textContent=fmt(t)+" / "+fmt(d);
+  $("#tl").setAttribute("aria-valuenow",Math.round(100*t/d));
+  let k=-1;chapters.forEach((c,i)=>{if(c.t<=t+0.01)k=i;});
+  document.querySelectorAll("#ch button").forEach(b=>{const on=+b.dataset.i===k;if(on&&!b.classList.contains("on")){const ol=$("#ch");const top=b.offsetTop-ol.offsetTop-ol.clientHeight/2+b.clientHeight/2;ol.scrollTo({top,behavior:reduce?"auto":"smooth"});}b.classList.toggle("on",on);});
+  $("#cur").textContent=k>=0?chapters[k].title.replace(/^(Cup arm|Tap arm): /,""):"";});
+const ppIcon=p=>$("#pp").innerHTML=p?'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>':'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+pv.addEventListener("play",()=>{ppIcon(1);$("#pp").setAttribute("aria-label","Pause");});pv.addEventListener("pause",()=>{ppIcon(0);$("#pp").setAttribute("aria-label","Play");});
+$("#pp").onclick=()=>pv.paused?pv.play():pv.pause();pv.onclick=()=>pv.paused?pv.play():pv.pause();
+$("#tl").onclick=e=>{const r=e.currentTarget.getBoundingClientRect();pv.currentTime=(pv.duration||0)*(e.clientX-r.left)/r.width;};
+$("#tl").onkeydown=e=>{if(e.key==="ArrowRight")pv.currentTime+=5;if(e.key==="ArrowLeft")pv.currentTime-=5;};
+$("#speed").onclick=e=>{const b=e.target.closest("button");if(!b)return;$("#speed").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));pv.playbackRate=+b.dataset.r;};
+$("#fs").onclick=()=>{(pv.requestFullscreen||pv.webkitEnterFullscreen||(()=>{})).call(pv);};
+select(2,false);
+
+/* pipeline */
+const pipe=$("#pipe");
+PIPE.forEach((p,i)=>{const b=document.createElement("button");b.className="node";b.type="button";b.role="tab";b.setAttribute("aria-selected",i===0);
+  b.innerHTML=`<i>${i+1}</i><span>${p[0]}</span>`;b.onclick=()=>pick(i);pipe.appendChild(b);});
+function pick(i){pipe.querySelectorAll(".node").forEach((n,k)=>n.setAttribute("aria-selected",k===i));$("#pd").innerHTML=`<span class="eyebrow">Layer ${i+1}</span><h3 style="margin-top:8px">${PIPE[i][0]}</h3><p>${PIPE[i][1]}</p>`;}
+pick(0);
+
+/* results chart */
+function chart(){const c=$("#chart");c.innerHTML="";
+  RESULTS.levels.forEach(r=>{const row=document.createElement("div");row.className="row";
+    const col=r.rate>=r.target?"var(--ok)":r.rate>=50?"var(--warn)":"var(--bad)";
+    const fmax=Math.max(...r.failures.map(f=>f[1]),1);
+    row.innerHTML=`<button type="button" aria-expanded="false"><span class="nm"><small>Level ${r.level}</small><b>${r.name}</b></span>
+      <span class="bararea" aria-hidden="true"><span class="bg"></span><span class="val" style="background:${col}" data-w="${r.rate}%"></span>
+        <span class="ci" style="left:${r.wilson[0]}%;width:${r.wilson[1]-r.wilson[0]}%"></span><span class="tg" style="left:${r.target}%" title="target ${r.target} %"></span>
+        <span class="pv" style="left:${r.previous}%" title="previous run ${r.previous} %"></span></span>
+      <span class="pct" style="color:${col}">${r.rate}%</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="more"><div><div class="fails"><div class="small muted">${r.passed} of ${r.trials} passed · 95 % interval ${r.wilson[0]}–${r.wilson[1]} % · target ${r.target} % · previous run ${r.previous} %${r.mean_time_s?` · ${r.mean_time_s} s per passing run`:""}</div>
+        ${r.failures.map(f=>`<div class="fail"><span>${f[0]}</span><span class="fb"><i style="width:${100*f[1]/fmax}%"></i></span><b>${f[1]}</b></div>`).join("")}</div></div></div>`;
+    const b=row.querySelector("button");b.setAttribute("aria-label",`Level ${r.level}, ${r.name}: ${r.rate} percent of ${r.trials} trials passed, target ${r.target} percent. Show failures.`);
+    b.onclick=()=>{row.classList.toggle("open");b.setAttribute("aria-expanded",row.classList.contains("open"));};
+    c.appendChild(row);});
+  if(c.classList.contains("in")) c.querySelectorAll(".val").forEach(v=>v.style.width=v.dataset.w);
+  document.querySelectorAll(".tr").forEach(s=>{const r=RESULTS.levels.find(x=>x.level===+s.dataset.l);if(r)s.textContent=` · ${r.rate}%`;});
+  if(cur) select(cur,false);}
+$("#pvt").onchange=e=>$("#chart").classList.toggle("nopv",!e.target.checked);
+fetch("data/results.json").then(r=>r.json()).then(d=>{RESULTS=d;chart();}).catch(()=>{$("#chart").innerHTML='<p class="muted small" style="padding:14px">Results could not be loaded.</p>';});
+$("#issues").innerHTML=ISSUES.map(i=>`<div class="issue ${i[0]==="w"?"w":""} rv"><h4>${i[1]}</h4><p>${i[2]}</p></div>`).join("");
+document.querySelectorAll("#issues .rv").forEach(el=>io.observe(el));
+
+/* dance */
+const dg=$("#danceGrid");
+DANCE.forEach(d=>{const c=document.createElement("div");c.className="card rv";
+  c.innerHTML=`<button class="thumb" type="button" aria-label="Play ${d[1]}"><img src="videos/${d[0]}.jpg" alt=""><span class="pl"><span></span></span></button><div class="body"><h3>${d[1]}</h3><p>${d[2]}</p></div>`;
+  c.querySelector(".thumb").onclick=()=>openClip(d);dg.appendChild(c);io.observe(c);});
+const dlg=$("#dlg"),dv=$("#dv"),oa=$("#oa"),SONG_START=30,RISE=4;
+function openClip(d){dv.src=`videos/${d[0]}.mp4`;$("#dt").textContent=d[1];$("#dd").textContent=d[2];dlg.showModal();dv.play().catch(()=>{});}
+$("#dx").onclick=()=>dlg.close();dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close();});
+dlg.addEventListener("close",()=>{dv.pause();dv.removeAttribute("src");oa.pause();});
 const songT=()=>SONG_START+Math.max(dv.currentTime-RISE,0);
-function syncOwn(){ if(!oa.src) return; const inRise=dv.currentTime<RISE;
-  if(dv.paused||inRise){ oa.pause(); if(inRise) oa.currentTime=SONG_START; return; }
-  if(Math.abs(oa.currentTime-songT())>0.08) oa.currentTime=songT(); if(oa.paused) oa.play().catch(()=>{}); }
-document.getElementById("ownf").onchange=e=>{const f=e.target.files[0]; if(!f) return; if(oa.src) URL.revokeObjectURL(oa.src);
-  oa.src=URL.createObjectURL(f); dv.muted=true; dv.currentTime=0; dv.play().catch(()=>{});};
-["play","pause","seeked","timeupdate","ratechange"].forEach(ev=>dv.addEventListener(ev,()=>{oa.playbackRate=dv.playbackRate; syncOwn();}));
-dv.addEventListener("loadstart",()=>{oa.pause(); oa.removeAttribute("src"); document.getElementById("ownf").value="";});
+function syncOwn(){if(!oa.src)return;const inRise=dv.currentTime<RISE;
+  if(dv.paused||inRise){oa.pause();if(inRise)oa.currentTime=SONG_START;return;}
+  if(Math.abs(oa.currentTime-songT())>0.08)oa.currentTime=songT();if(oa.paused)oa.play().catch(()=>{});}
+$("#ownf").onchange=e=>{const f=e.target.files[0];if(!f)return;if(oa.src)URL.revokeObjectURL(oa.src);oa.src=URL.createObjectURL(f);dv.muted=true;dv.currentTime=0;dv.play().catch(()=>{});};
+["play","pause","seeked","timeupdate","ratechange"].forEach(ev=>dv.addEventListener(ev,()=>{oa.playbackRate=dv.playbackRate;syncOwn();}));
+dv.addEventListener("loadstart",()=>{oa.pause();oa.removeAttribute("src");$("#ownf").value="";});
+
+/* copy */
+$("#copy").onclick=async()=>{const t=$("#cmd").innerText.split("\n").map(l=>l.replace(/\s+#.*$/,"")).join("\n");
+  try{await navigator.clipboard.writeText(t);$("#copy").textContent="Copied";}catch(e){$("#copy").textContent="Select and copy";}setTimeout(()=>$("#copy").textContent="Copy",1600);};
 </script>
 </body>
 </html>

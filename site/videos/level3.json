@@ -1,0 +1,165 @@
+{
+ "level": 3,
+ "ok": true,
+ "flow_s": 6.95,
+ "coaster_offset_mm": 4.5,
+ "sim_time_s": 109.1,
+ "chapters": [
+  {
+   "t": 0.0,
+   "id": "cup.blade",
+   "title": "Cup arm: close the fingertips into a blade",
+   "group": "Pick"
+  },
+  {
+   "t": 0.64,
+   "id": "cup.height",
+   "title": "Cup arm: peck down on the stack to measure its height",
+   "group": "Pick"
+  },
+  {
+   "t": 10.23,
+   "id": "cup.open",
+   "title": "Cup arm: open the jaws",
+   "group": "Pick"
+  },
+  {
+   "t": 10.87,
+   "id": "cup.approach",
+   "title": "Cup arm: roll the wrist the other way, then move in",
+   "group": "Pick"
+  },
+  {
+   "t": 14.15,
+   "id": "cup.slide_in",
+   "title": "Cup arm: slide the open fingers around the top cup",
+   "group": "Pick"
+  },
+  {
+   "t": 17.25,
+   "id": "cup.close",
+   "title": "Cup arm: close on the top cup (gentle 15 N cap)",
+   "group": "Pick"
+  },
+  {
+   "t": 17.73,
+   "id": "tap.pin_approach",
+   "title": "Tap arm: move beside the lower stack",
+   "group": "Pick"
+  },
+  {
+   "t": 27.75,
+   "id": "cup.unstack",
+   "title": "Cup arm: wiggle the top cup free and lift it",
+   "group": "Pick"
+  },
+  {
+   "t": 43.51,
+   "id": "tap.unpin",
+   "title": "Tap arm: let go of the lower stack and back off",
+   "group": "Pick"
+  },
+  {
+   "t": 46.54,
+   "id": "tap.stow",
+   "title": "Tap arm: fold away from the stack",
+   "group": "Pick"
+  },
+  {
+   "t": 49.96,
+   "id": "cup.flip_lift",
+   "title": "Cup arm: roll the wrist back to its normal position",
+   "group": "Pick"
+  },
+  {
+   "t": 52.79,
+   "id": "cup.carry",
+   "title": "Carry the cup beside the dispenser and lower it to spout height",
+   "group": "Pour"
+  },
+  {
+   "t": 52.79,
+   "id": "tap.ready",
+   "title": "Tap arm: open fingers beside the handle",
+   "group": "Pour"
+  },
+  {
+   "t": 64.76,
+   "id": "cup.under",
+   "title": "Slide the cup under the outlet",
+   "group": "Pour"
+  },
+  {
+   "t": 69.19,
+   "id": "tap.hold",
+   "title": "Tap arm: close the fingers on the handle",
+   "group": "Pour"
+  },
+  {
+   "t": 74.76,
+   "id": "tap.lift",
+   "title": "Tap arm: lift the handle open",
+   "group": "Pour"
+  },
+  {
+   "t": 77.33,
+   "id": "pour",
+   "title": "Hold the valve open for the pour",
+   "group": "Pour"
+  },
+  {
+   "t": 81.58,
+   "id": "tap.lower",
+   "title": "Tap arm: lower the handle shut",
+   "group": "Pour"
+  },
+  {
+   "t": 84.32,
+   "id": "tap.release",
+   "title": "Tap arm: let go and lift off the handle",
+   "group": "Pour"
+  },
+  {
+   "t": 88.1,
+   "id": "cup.exit",
+   "title": "Slide the cup out from under the outlet",
+   "group": "Serve"
+  },
+  {
+   "t": 88.1,
+   "id": "tap.rest",
+   "title": "Tap arm: return to rest",
+   "group": "Serve"
+  },
+  {
+   "t": 93.42,
+   "id": "cup.to_coaster",
+   "title": "Carry the cup above the coaster",
+   "group": "Serve"
+  },
+  {
+   "t": 98.75,
+   "id": "cup.place",
+   "title": "Lower the cup into the coaster",
+   "group": "Serve"
+  },
+  {
+   "t": 102.45,
+   "id": "cup.release",
+   "title": "Open the jaws and let go",
+   "group": "Serve"
+  },
+  {
+   "t": 102.56,
+   "id": "cup.retreat",
+   "title": "Back the hand out clear",
+   "group": "Serve"
+  },
+  {
+   "t": 106.31,
+   "id": "cup.rest",
+   "title": "Cup arm: return to rest",
+   "group": "Serve"
+  }
+ ]
+}

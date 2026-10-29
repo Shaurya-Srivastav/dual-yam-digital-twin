@@ -118,7 +118,7 @@ def build_level(level: int, ctx: Ctx) -> List[StepDef]:
     if level == 4:
         steps = pick_upright(ctx, "", ctx.bel.cup_xy, seat) + serve_steps(ctx, "", "cup.lift", seat, tap_after=("tap.search",))
         steps.insert(0, _step("tap.search", "Tap arm: close on the knob, then walk the circle to find the handle", "Pour", "tap", [],
-                              lambda c: S3.s_pinch_lever(c), "a close past the knob that stalls has the radius; an empty close does not"))
+                              lambda c: S3.s_lever_search(c), "a close past the knob that stalls has the radius; behind the tank, a fingertip finds it"))
         return steps
     if level == 5:
         steps = [

@@ -671,9 +671,9 @@ def _approach_yaw(ctx: Ctx, psi: float):
 def _park_handle(ctx: Ctx, pivot: np.ndarray, z: float, psi: float):
     """Let go, and close again on the pour angle. Dragging the handle around the knob puts a pad into the tank."""
     goal = float(PARK_YAW)
-    yield from ctx.grip_open("tap", L.GRIPPER_MAX_OPEN_M, cap=8.0)
+    yield from ctx.grip_open("tap", 0.050, cap=8.0)
     T = lever_grip_frame(pivot, goal)
-    if not (yield from _try_descend(ctx, T, L.GRIPPER_MAX_OPEN_M)):
+    if not (yield from _try_descend(ctx, T, 0.050)):
         raise SkillFault(f"the handle was felt at {np.degrees(psi):.0f} deg and the pour angle cannot be reached without hitting the tank")
     res = yield from ctx.grip_close("tap", 6.0, rate=0.035)
     held = bool(res["stalled"] and 0.004 < res["width"] < 0.030 and res["force"] > 0.8)
@@ -708,7 +708,7 @@ def s_pinch_lever(ctx: Ctx):
     cres = yield from ctx.grip_close("tap", 6.0, rate=0.03, target=0.020)
     ctx.event(f"knob centre: jaws {fmt_mm(cres['width'])}, {cres['force']:.1f} N")
     psi0 = float(PARK_YAW)
-    yield from ctx.grip_open("tap", L.GRIPPER_MAX_OPEN_M, cap=8.0)
+    yield from ctx.grip_open("tap", 0.050, cap=8.0)
     # The centre close leaves the hand against the knob. Fold back to rest before walking the
     # radii, and approach each one the way the pour does, from above. A straight move off the knob clips the tank.
     T0 = ctx.tcp("tap")
@@ -716,7 +716,7 @@ def s_pinch_lever(ctx: Ctx):
     up[2, 3] = float(T0[2, 3]) + 0.10
     try:
         hop = M.cart_move(kin, [T0, up], ctx.q("tap"), v_cart=0.06, speed_scale=ctx.speed, min_T=0.4, max_joint_step=0.3)
-        ctx.check_traj("tap", hop, grip_width=L.GRIPPER_MAX_OPEN_M)
+        ctx.check_traj("tap", hop, grip_width=0.050)
         yield from ctx.play("tap", hop)
     except PlanError:
         pass
@@ -739,7 +739,8 @@ def s_pinch_lever(ctx: Ctx):
         if held:
             found = (float(psi), res)
             break
-        yield from ctx.grip_open("tap", L.GRIPPER_MAX_OPEN_M, cap=8.0)
+        # Back to the approach width only: fully open pads beside the knob reach the tank.
+        yield from ctx.grip_open("tap", 0.050, cap=8.0)
     if found is None:
         ctx.monitor("tap", False)
         raise SkillFault(f"closed on {tried} radii around the knob and never held the handle")
@@ -955,3 +956,27 @@ def s_find_lever(ctx: Ctx):
     ctx.bel.lever_yaw = float(yaw)
     ctx.bel.found["lever_yaw_before"] = float(yaw_first)
     return {"msg": f"handle was at about {np.degrees(yaw_first):.0f} deg; now at {np.degrees(yaw):.0f} deg, checked by touch"}
+
+
+def s_lever_search(ctx: Ctx):
+    """Close around the knob first. The jaws only reach the radii on the open side of the tank, so a handle
+    lying behind it is pushed round by the fingertip sweep instead."""
+    try:
+        return (yield from s_pinch_lever(ctx))
+    except SkillFault as exc:
+        ctx.monitor("tap", False)
+        ctx.event(f"the circle of closes did not get the handle ({exc}); feeling for it with a fingertip instead")
+    yield from ctx.grip_open("tap", 0.050, cap=8.0)
+    kin = ctx.kin["tap"]
+    T0 = ctx.tcp("tap")
+    T1 = T0.copy()
+    T1[2, 3] = float(T0[2, 3]) + 0.08
+    try:
+        up = M.cart_move(kin, [T0, T1], ctx.q("tap"), v_cart=0.06, speed_scale=ctx.speed, min_T=0.5, max_joint_step=0.3)
+        ctx.check_traj("tap", up, grip_width=0.050)
+        yield from ctx.play("tap", up)
+    except PlanError:
+        pass
+    out = yield from s_find_lever(ctx)
+    out["msg"] = "circle of closes missed the handle; " + out["msg"]
+    return out

@@ -5,7 +5,9 @@
 
 Dance videos are silent (the songs are copyrighted); the dots show the tracked beat. Captions are drawn from the executor's own step titles.
 """
+import json
 import subprocess
+from pathlib import Path
 import sys
 
 import mujoco
@@ -64,9 +66,16 @@ def level(lv: int, out: str) -> None:
     r.update_scene(P.data, camera=cam); r.render()
     sink, nxt = Sink(out), 0.0
     names = {s.id: s.title for s in S.steps}
+    groups = {s.id: s.group for s in S.steps}
+    chapters = []
+    seen = set()
     while not S.ex.finished and not S.ex.fault and P.time - S.t_zero < 400:
         S.tick()
         t = P.time - S.t_zero
+        for sid in S.ex.running():
+            if sid not in seen:
+                seen.add(sid)
+                chapters.append(dict(t=round(t, 2), id=sid, title=names[sid], group=groups[sid]))
         if t >= nxt:
             nxt += 1.0 / FPS
             r.update_scene(P.data, camera=cam)
@@ -79,6 +88,10 @@ def level(lv: int, out: str) -> None:
         verdict = "all referee checks passed" if res["ok"] else "did not pass: " + ", ".join(res["reasons"][:3])
         sink.write(np.asarray(caption(r.render(), [f"Level {lv} finished: {verdict}"[:80], f"flow {res['flow_s']:.2f} s  ·  cup {res['coaster_offset_mm']:.0f} mm from the coaster centre  ·  {res['sim_time_s']:.0f} s"])))
     sink.close()
+    summary = dict(level=lv, ok=bool(res["ok"]), flow_s=round(float(res["flow_s"]), 2),
+                   coaster_offset_mm=round(float(res["coaster_offset_mm"]), 1), sim_time_s=round(float(res["sim_time_s"]), 1),
+                   chapters=chapters)
+    Path(out).with_suffix(".json").write_text(json.dumps(summary, indent=1))
     print(f"level {lv}: pass={res['ok']} {res['reasons']}")
 
 
