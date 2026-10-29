@@ -533,6 +533,242 @@ def _wrap(a: float) -> float:
     return float((a + np.pi) % (2.0 * np.pi) - np.pi)
 
 
+# Just outside the valve. One centimetre from the centre is still on the knob (the valve is 21 mm across),
+# so a close there feels metal in every direction and says nothing about the handle. The handle is the
+# radius that sticks out past the knob; this is where a close can tell the line from empty air.
+RAY_RADIUS = 0.024
+
+
+def _ray_frame(pivot: np.ndarray, z: float, psi: float, radius: float = RAY_RADIUS) -> np.ndarray:
+    """Hand on the circle, jaws closing across the radius, wrist outside the knob.
+
+    The approach points toward the centre. The pads sit a few millimetres behind the TCP, so the TCP
+    is set just inside the probe radius and the wrist stays out past the handle, clear of the tank.
+    """
+    outward = np.array([np.cos(psi), np.sin(psi), 0.0])
+    inward = -outward
+    j = np.array([-np.sin(psi), np.cos(psi), 0.0])
+    p = np.array([float(pivot[0]), float(pivot[1]), z]) + outward * (radius - 0.008)
+    return frame_from(inward, j, p)
+
+
+def _angle_order(start: float) -> list:
+    step = np.radians(20.0)
+    out = [float(_wrap(start))]
+    k = 1
+    while len(out) < 18:
+        out.append(float(_wrap(start + k * step)))
+        out.append(float(_wrap(start - k * step)))
+        k += 1
+    return out[:18]
+
+
+def _try_descend(ctx: Ctx, T: np.ndarray, width: float):
+    """Come down onto T from above. A straight move from the knob clips the tank."""
+    kin = ctx.kin["tap"]
+    seeds = [ctx.q("tap"), np.array([0.6, 1.8, 1.3, 0.9, 0.0, 0.0]), np.array([0.4, 1.4, 1.0, 0.6, 0.0, 0.0])]
+    if not kin.ik_multi(T, seeds).ok:
+        return False
+        yield
+    above = T.copy()
+    above[2, 3] = float(T[2, 3]) + 0.08
+    here = ctx.tcp("tap")
+    up = here.copy()
+    up[2, 3] = max(float(here[2, 3]) + 0.06, float(above[2, 3]))
+    for poses in ([here, up, above, T], [here, above, T], [here, T]):
+        try:
+            traj = M.cart_move(kin, poses, ctx.q("tap"), v_cart=0.07, speed_scale=ctx.speed, min_T=0.45, max_joint_step=0.35)
+            ctx.check_traj("tap", traj, grip_width=width)
+        except PlanError:
+            continue
+        yield from ctx.play("tap", traj)
+        return True
+    return False
+
+
+def _try_move(ctx: Ctx, T: np.ndarray, width: float):
+    """Move the tap hand to T. Returns False when that pose, or the path to it, is not clear."""
+    kin = ctx.kin["tap"]
+    seeds = [ctx.q("tap"), np.array([0.6, 1.8, 1.3, 0.9, 0.0, 0.0]), np.array([0.4, 1.4, 1.0, 0.6, 0.0, 0.0])]
+    r = kin.ik_multi(T, seeds)
+    if not r.ok:
+        return False
+        yield
+    try:
+        traj = M.cart_move(kin, [ctx.tcp("tap"), T], ctx.q("tap"), v_cart=0.07, speed_scale=ctx.speed,
+                           min_T=0.4, max_joint_step=0.35)
+        ctx.check_traj("tap", traj, grip_width=width)
+    except PlanError:
+        try:
+            traj = M.joint_move(ctx.q("tap"), r.q, speed_scale=ctx.speed, min_T=0.6)
+            ctx.check_traj("tap", traj, grip_width=width)
+        except PlanError:
+            return False
+    yield from ctx.play("tap", traj)
+    return True
+
+
+def _lift_reachable(ctx: Ctx, psi: float) -> bool:
+    """True when the pour pinch can stand beside, and close on, a handle lying at this yaw."""
+    kin = ctx.kin["tap"]
+    T_g = lever_grip_frame(ctx.bel.lever_pivot, psi)
+    u = T_g[:3, 2]
+    T_pre = T_g.copy()
+    T_pre[:3, 3] = T_g[:3, 3] - u * 0.055 + Z_UP * 0.012
+    T_hi = T_pre.copy()
+    T_hi[2, 3] += 0.07
+    seeds = [ctx.q("tap"), np.array([0.6, 1.8, 1.3, 0.9, 0.0, 0.0]), np.array([0.5, 1.2, 0.8, 0.6, 0.0, 0.0]),
+             np.array([0.3, 2.0, 1.6, 1.4, 0.2, 0.0])]
+    q = None
+    for T in (T_hi, T_pre, T_g):
+        r = kin.ik_multi(T, ([q] if q is not None else []) + seeds)
+        if not r.ok:
+            return False
+        q = r.q
+    return True
+
+
+def _approach_yaw(ctx: Ctx, psi: float):
+    """Stand beside a candidate radius the way the pour pinch does.
+
+    The jaws stay near 5 cm on the way in. Fully open pads sweep the tank; the pour opens only once the hand is clear of it.
+    """
+    kin = ctx.kin["tap"]
+    T_g = lever_grip_frame(ctx.bel.lever_pivot, psi)
+    u = T_g[:3, 2]
+    T_pre = T_g.copy()
+    T_pre[:3, 3] = T_g[:3, 3] - u * 0.055 + Z_UP * 0.012
+    T_hi = T_pre.copy()
+    T_hi[2, 3] = float(T_pre[2, 3]) + 0.07
+    seeds = [ctx.q("tap"), np.array([0.6, 1.8, 1.3, 0.9, 0.0, 0.0]), np.array([0.5, 1.2, 0.8, 0.6, 0.0, 0.0]),
+             np.array([0.3, 2.0, 1.6, 1.4, 0.2, 0.0])]
+    rp = kin.ik_multi(T_pre, seeds)
+    rh = kin.ik_multi(T_hi, seeds + ([rp.q] if rp.ok else []))
+    if not (rh.ok and rp.ok):
+        ctx.event(f"radius {np.degrees(psi):.0f} deg ik: {(rp.reason or rh.reason or 'no solution')[:80]}")
+        return False
+        yield
+    width = 0.050
+    if ctx.width("tap") > width + 0.008:
+        yield from ctx.grip_open("tap", width, cap=8.0)
+    try:
+        traj = M.via_move([ctx.q("tap"), rh.q, rp.q], speed_scale=ctx.speed, min_T=0.8)
+        ctx.check_traj("tap", traj, grip_width=width)
+    except PlanError as exc:
+        ctx.event(f"radius {np.degrees(psi):.0f} deg path: {exc}")
+        return False
+    yield from ctx.play("tap", traj)
+    try:
+        slide = M.cart_move(kin, [ctx.tcp("tap"), T_g], ctx.q("tap"), v_cart=0.04, speed_scale=ctx.speed, min_T=0.45, max_joint_step=0.22)
+        ctx.check_traj("tap", slide, grip_width=width)
+    except PlanError as exc:
+        ctx.event(f"radius {np.degrees(psi):.0f} deg slide: {exc}")
+        return False
+    yield from ctx.play("tap", slide)
+    return True
+
+
+def _park_handle(ctx: Ctx, pivot: np.ndarray, z: float, psi: float):
+    """Let go, and close again on the pour angle. Dragging the handle around the knob puts a pad into the tank."""
+    goal = float(PARK_YAW)
+    yield from ctx.grip_open("tap", L.GRIPPER_MAX_OPEN_M, cap=8.0)
+    T = lever_grip_frame(pivot, goal)
+    if not (yield from _try_descend(ctx, T, L.GRIPPER_MAX_OPEN_M)):
+        raise SkillFault(f"the handle was felt at {np.degrees(psi):.0f} deg and the pour angle cannot be reached without hitting the tank")
+    res = yield from ctx.grip_close("tap", 6.0, rate=0.035)
+    held = bool(res["stalled"] and 0.004 < res["width"] < 0.030 and res["force"] > 0.8)
+    if not held:
+        raise SkillFault(f"closed at the pour angle after feeling the handle at {np.degrees(psi):.0f} deg and the jaws did not take it ({fmt_mm(res['width'])}, {res['force']:.1f} N)")
+    return goal
+
+
+def s_pinch_lever(ctx: Ctx):
+    """Find the handle from above.
+
+    The only thing known is the centre of the knob. The handle is a radius of that circle. The hand
+    closes on the centre so it knows it is on the knob, then walks the circle just outside the knob.
+    A close that stalls has the radius between the jaws. A close that shuts on nothing is empty air,
+    and the hand tries the next radius. If that angle is one the pour cannot lift, the jaws keep the
+    handle and turn it to the angle they can.
+    """
+    kin = ctx.kin["tap"]
+    P = np.asarray(ctx.bel.lever_pivot, float)
+    z = float(P[2]) + 0.0015 + 0.5 * L.LEVER_HANDLE_THICK
+    yield from ctx.grip_open("tap", L.GRIPPER_MAX_OPEN_M)
+    centre = side_frame(kin, P[:2], z, off=0.0, tilt=0.0)
+    above = centre.copy()
+    above[2, 3] = z + 0.07
+    if not (yield from _try_move(ctx, above, L.GRIPPER_MAX_OPEN_M)):
+        ctx.event("could not hover above the knob; going to the centre directly")
+    if not (yield from _try_move(ctx, centre, L.GRIPPER_MAX_OPEN_M)):
+        raise SkillFault("cannot reach the centre of the knob")
+    ctx.monitor("tap", True)
+    # Stop at 20 mm. The stem is 11 mm, so a close all the way through the centre turns the handle
+    # into the fingers and the angle is lost. This close only confirms the hand is on the knob.
+    cres = yield from ctx.grip_close("tap", 6.0, rate=0.03, target=0.020)
+    ctx.event(f"knob centre: jaws {fmt_mm(cres['width'])}, {cres['force']:.1f} N")
+    psi0 = float(PARK_YAW)
+    yield from ctx.grip_open("tap", L.GRIPPER_MAX_OPEN_M, cap=8.0)
+    # The centre close leaves the hand against the knob. Fold back to rest before walking the
+    # radii, and approach each one the way the pour does, from above. A straight move off the knob clips the tank.
+    T0 = ctx.tcp("tap")
+    up = T0.copy()
+    up[2, 3] = float(T0[2, 3]) + 0.10
+    try:
+        hop = M.cart_move(kin, [T0, up], ctx.q("tap"), v_cart=0.06, speed_scale=ctx.speed, min_T=0.4, max_joint_step=0.3)
+        ctx.check_traj("tap", hop, grip_width=L.GRIPPER_MAX_OPEN_M)
+        yield from ctx.play("tap", hop)
+    except PlanError:
+        pass
+    try:
+        rest = M.joint_move(ctx.q("tap"), L.REST_Q, speed_scale=ctx.speed, min_T=0.8)
+        ctx.check_traj("tap", rest, grip_width=L.GRIPPER_MAX_OPEN_M)
+        yield from ctx.play("tap", rest)
+    except PlanError as exc:
+        ctx.event(f"could not fold clear of the knob ({exc})")
+    found = None
+    tried = 0
+    for psi in _angle_order(psi0):
+        if not (yield from _approach_yaw(ctx, psi)):
+            ctx.event(f"radius {np.degrees(psi):.0f} deg: unreachable")
+            continue
+        tried += 1
+        res = yield from ctx.grip_close("tap", 6.0, rate=0.035)
+        held = bool(res["stalled"] and 0.004 < res["width"] < 0.030 and res["force"] > 0.8)
+        ctx.event(f"radius {np.degrees(psi):.0f} deg: jaws {fmt_mm(res['width'])}, {res['force']:.1f} N, {'held' if held else 'clear'}")
+        if held:
+            found = (float(psi), res)
+            break
+        yield from ctx.grip_open("tap", L.GRIPPER_MAX_OPEN_M, cap=8.0)
+    if found is None:
+        ctx.monitor("tap", False)
+        raise SkillFault(f"closed on {tried} radii around the knob and never held the handle")
+    psi, res = found
+    yaw = float(_wrap(psi))
+    ctx.bel.found["lever_yaw_before"] = yaw
+    # A reachable angle can still sweep the tank. Leave the handle at the pour angle unless it is already there.
+    if abs(_wrap(yaw - PARK_YAW)) > PARK_TOLERANCE or not _lift_reachable(ctx, yaw):
+        yaw = float(_wrap((yield from _park_handle(ctx, P, z, psi))))
+        ctx.event(f"turned the handle from {np.degrees(psi):.0f} deg to {np.degrees(yaw):.0f} deg, where the lift can take it")
+    # Open only to the pour's standoff width, and back out along the approach we just came in on.
+    # Opening all the way, or lifting across the knob, puts a pad on the tank.
+    yield from ctx.grip_open("tap", 0.050, cap=6.0)
+    T_g = lever_grip_frame(P, yaw)
+    u = T_g[:3, 2]
+    T_pre = T_g.copy()
+    T_pre[:3, 3] = T_g[:3, 3] - u * 0.055 + Z_UP * 0.012
+    try:
+        back = M.cart_move(kin, [ctx.tcp("tap"), T_pre], ctx.q("tap"), v_cart=0.04, speed_scale=ctx.speed, min_T=0.4, max_joint_step=0.22)
+        ctx.check_traj("tap", back, grip_width=0.050)
+        yield from ctx.play("tap", back)
+    except PlanError as exc:
+        raise SkillFault(f"the hand has the handle but cannot back off it ({exc})")
+    ctx.monitor("tap", False)
+    ctx.bel.lever_yaw = yaw
+    return {"msg": (f"handle held on the radius at {np.degrees(psi):.0f} deg, jaws {fmt_mm(res['width'])}; "
+                    f"left at {np.degrees(yaw):.0f} deg")}
+
+
 def s_find_lever(ctx: Ctx):
     kin = ctx.kin["tap"]
     P = ctx.bel.lever_pivot

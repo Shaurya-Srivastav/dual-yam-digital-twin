@@ -7,33 +7,37 @@
 <title>Dual-YAM digital twin</title>
 <style>
 :root{
-  --bg:#0e1015; --panel:#151922; --panel2:#1b2030; --line:#262d3d; --text:#e7eaf1; --muted:#8a93a8;
-  --cup:#4fb3ff; --tap:#ffb454; --ok:#4cd08a; --warn:#f2c14e; --bad:#ff6b6b; --acc:#7c8cff;
-  --s1:8px; --s2:16px; --s3:24px; --rail:clamp(340px,28vw,460px);
+  --bg:#f4f1ea; --panel:#fbf9f4; --panel2:#f3eee6; --line:#ddd6c8; --text:#1b1814; --muted:#6a635a;
+  --cup:#1d5f8a; --tap:#8d3b22; --ok:#1c6b43; --warn:#8a5a12; --bad:#922e2e; --acc:#8d3b22;
+  --s1:8px; --s2:16px; --s3:24px; --rail:clamp(360px,30vw,480px);
+  --serif:"Iowan Old Style",Palatino,"Palatino Linotype",Georgia,serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:var(--bg);color:var(--text);font:13px/1.45 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;overflow:hidden}
+html,body{height:100%;background:var(--bg);color:var(--text);font:13.5px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}}
 button,select,input{font:inherit;color:inherit}
 #app{display:grid;grid-template-columns:1fr var(--rail);grid-template-rows:48px 1fr;height:100%}
 header{grid-column:1/3;display:flex;align-items:center;gap:var(--s2);padding:0 var(--s2);background:var(--panel);border-bottom:1px solid var(--line)}
-header h1{font-size:14px;font-weight:600;letter-spacing:.2px}
+header h1{font-family:var(--serif);font-size:16px;font-weight:560;letter-spacing:-.01em}
 header .sub{color:var(--muted)}
 .badge{padding:2px 10px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.6px;background:var(--panel2);border:1px solid var(--line)}
 .badge.RUNNING{color:var(--ok);border-color:var(--ok)} .badge.PAUSED{color:var(--warn);border-color:var(--warn)}
 .badge.FAULT{color:var(--bad);border-color:var(--bad)} .badge.DONE{color:var(--acc);border-color:var(--acc)}
-.badge.DANCE,.badge.SCRUB{color:#d58cff;border-color:#d58cff}
+.badge.DANCE,.badge.SCRUB{color:var(--tap);border-color:var(--tap)}
 .spacer{flex:1}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-#stage{position:relative;min-width:0;background:#07080b;overflow:hidden}
+#stage{position:relative;min-width:0;background:#141311;overflow:hidden}
 #view{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab}
 #view:active{cursor:grabbing}
 #cube{position:absolute;top:var(--s2);right:var(--s2);width:132px;height:132px;cursor:pointer}
-#toolbar{position:absolute;left:var(--s2);bottom:var(--s2);display:flex;gap:var(--s1);align-items:center;background:rgba(21,25,34,.82);border:1px solid var(--line);border-radius:10px;padding:var(--s1);backdrop-filter:blur(8px)}
-#toolbar button{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:4px 10px;cursor:pointer}
-#toolbar button.on{border-color:var(--acc);color:var(--acc)}
-#toolbar label{color:var(--muted);display:flex;align-items:center;gap:6px}
+#toolbar{position:absolute;left:var(--s2);bottom:var(--s2);display:flex;gap:var(--s1);align-items:center;background:rgba(20,19,17,.92);border:1px solid #3a342c;border-radius:2px;padding:var(--s1);color:#f4f1ea}
+#toolbar button{background:#221f1b;color:#f4f1ea;border:1px solid #3a342c;border-radius:2px;padding:4px 10px;cursor:pointer}
+#toolbar button.on{border-color:#e7b5a4;color:#e7b5a4}
+#toolbar label{color:#cfc6b8;display:flex;align-items:center;gap:6px}
 #toolbar input[type=range]{width:120px;accent-color:var(--acc)}
-#hud{position:absolute;left:var(--s2);top:var(--s2);color:var(--muted);font-size:11px;text-shadow:0 1px 2px #000}
+#hud{position:absolute;left:var(--s2);top:var(--s2);color:#d9d3c7;font-size:11px;text-shadow:0 1px 2px #000}
 #banner{position:absolute;left:50%;top:var(--s2);transform:translateX(-50%);padding:6px 14px;border-radius:8px;background:rgba(255,107,107,.15);border:1px solid var(--bad);color:var(--bad);display:none;max-width:60%}
 aside{display:flex;flex-direction:column;min-height:0;background:var(--panel);border-left:1px solid var(--line)}
 .tabs{display:flex;border-bottom:1px solid var(--line)}
@@ -47,15 +51,15 @@ h3:first-child{margin-top:0}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{background:var(--panel2);border:0;border-right:1px solid var(--line);padding:6px 12px;cursor:pointer;color:var(--muted)}
 .seg button:last-child{border-right:0}
-.seg button.on{background:#262e4d;color:var(--text)}
+.seg button.on{background:var(--text);color:var(--bg)}
 .btn{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer;font-weight:600}
 .btn:hover{border-color:var(--acc)}
-.btn.primary{background:var(--acc);border-color:var(--acc);color:#0b0d18}
+.btn.primary{background:var(--text);border-color:var(--text);color:var(--bg)}
 .btn.danger{color:var(--bad)}
 .btn:disabled{opacity:.4;cursor:default}
 .lvl{display:grid;grid-template-columns:1fr;gap:6px}
 .lvl button{display:flex;gap:10px;align-items:baseline;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
-.lvl button.on{border-color:var(--acc);background:#1f2542}
+.lvl button.on{border-color:var(--acc);background:#f6ebe6}
 .lvl b{width:20px;color:var(--acc)} .lvl span{color:var(--muted);font-size:12px}
 #ringbox{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s2)}
 #ring{width:92px;height:92px;flex:none}
@@ -70,13 +74,13 @@ h3:first-child{margin-top:0}
 .step .t{font-weight:600} .step .d{color:var(--muted);font-size:12px;grid-column:2/4}
 .step .st{font-size:11px;color:var(--muted)}
 .step.waiting{opacity:.5}
-.step.running{background:#1a2036;border-color:#2c3764}
+.step.running{background:#f6ebe6;border-color:var(--acc)}
 .step.running .st{color:var(--ok)} .step.done .st{color:var(--ok)} .step.failed .st{color:var(--bad)}
 .step.done,.step.running,.step.failed{cursor:pointer}
 .step.failed .d{color:var(--bad)}
-#events{font-size:12px;color:var(--muted);max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:#10131b}
+#events{font-size:12px;color:var(--muted);max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:2px;padding:6px 8px;background:var(--panel2)}
 #events div{padding:1px 0} #events b{color:var(--text);font-weight:500}
-.chart{margin-bottom:var(--s2)} .chart canvas{width:100%;height:92px;display:block;background:#10131b;border:1px solid var(--line);border-radius:8px}
+.chart{margin-bottom:var(--s2)} .chart canvas{width:100%;height:92px;display:block;background:var(--panel2);border:1px solid var(--line);border-radius:2px}
 .chart .l{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-bottom:4px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:12px} .kv span:nth-child(odd){color:var(--muted)}
 table{width:100%;border-collapse:collapse;font-size:12px} th,td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left} th{color:var(--muted);font-weight:500}
@@ -86,7 +90,7 @@ table{width:100%;border-collapse:collapse;font-size:12px} th,td{padding:5px 6px;
 .track b{display:block} .track span{color:var(--muted);font-size:12px}
 #ytwrap{aspect-ratio:16/9;background:#000;border-radius:8px;overflow:hidden;margin:var(--s1) 0}
 #ytwrap iframe{width:100%;height:100%}
-input[type=number],input[type=text]{background:#10131b;border:1px solid var(--line);border-radius:6px;padding:4px 8px;width:80px}
+input[type=number],input[type=text]{background:var(--paper);border:1px solid var(--line);border-radius:2px;padding:4px 8px;width:80px}
 input[type=file]{max-width:100%}
 a{color:var(--acc)}
 .res li{list-style:none;padding:2px 0} .res li::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;background:var(--ok)} .res li.f::before{background:var(--bad)}
@@ -132,7 +136,7 @@ a{color:var(--acc)}
         <button class="btn danger" id="bAbort">Abort</button><button class="btn" id="bReset">Reset</button>
       </div>
       <div id="ringbox">
-        <svg id="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="none" stroke="#262d3d" stroke-width="9"/><circle id="ringArc" cx="50" cy="50" r="42" fill="none" stroke="#4fb3ff" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 264" transform="rotate(-90 50 50)"/><text id="ringTxt" x="50" y="54" text-anchor="middle" fill="#e7eaf1" font-size="17" font-weight="700">0.0</text></svg>
+        <svg id="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="none" stroke="#ddd6c8" stroke-width="9"/><circle id="ringArc" cx="50" cy="50" r="42" fill="none" stroke="#1d5f8a" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 264" transform="rotate(-90 50 50)"/><text id="ringTxt" x="50" y="54" text-anchor="middle" fill="#1b1814" font-size="17" font-weight="700">0.0</text></svg>
         <div><div class="big" id="pourBig">Pour 0.0 / 7.0 s</div><div class="small" id="pourSmall">handle 0° · closed</div><div class="small" id="progressTxt"></div></div>
       </div>
       <h3>Steps <span class="muted" style="text-transform:none;letter-spacing:0">(click a finished step to scrub back to it)</span></h3>
@@ -172,7 +176,7 @@ a{color:var(--acc)}
       <div class="row" style="margin:var(--s1) 0">
         <button class="btn primary" id="dStart">Start dance</button><button class="btn" id="dPlay">Play / pause</button><button class="btn danger" id="dStop">Stop</button>
       </div>
-      <canvas id="beatviz" style="width:100%;height:84px;display:block;background:#10131b;border:1px solid var(--line);border-radius:8px"></canvas>
+      <canvas id="beatviz" style="width:100%;height:84px;display:block;background:#f3eee6;border:1px solid var(--line);border-radius:2px"></canvas>
       <h3>Sync</h3>
       <div class="row"><label class="row muted" style="flex:1">nudge <input id="sync" type="range" min="-250" max="250" step="5" value="0" style="flex:1;accent-color:var(--acc)"> <b class="mono" id="syncv">0 ms</b></label></div>
       <div class="muted" style="font-size:12px">The arms follow the audio clock, posed 200 ms ahead to cover the tracker lag and the display. If they look early or late on your speakers, nudge.</div>
@@ -187,8 +191,8 @@ a{color:var(--acc)}
 "use strict";
 const $ = (id) => document.getElementById(id);
 const LEVELS = [
-  [1, "Upright cup in the coaster", "known position"], [2, "Nested stack, height known", "pin · wiggle · lay · flip"],
-  [3, "Nested stack, height unknown", "peck to count the cups"], [4, "Lever angle unknown", "feel for the handle"], [5, "Cup in the search region", "peck grid, then fit"],
+  [1, "Upright cup in the coaster", "known position"], [2, "Nested stack, height known", "flip, then hand it across in the air"],
+  [3, "Nested stack, height unknown", "peck, then hand it across in the air"], [4, "Lever angle unknown", "close around the knob to find the radius"], [5, "Cup in the search region", "stamp the mat, then fit"],
 ];
 let S = null, cfg = {level: 1, material: "paper"}, tab = "run";
 const post = (u, b) => fetch(u, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(b || {})}).then(r => r.json());

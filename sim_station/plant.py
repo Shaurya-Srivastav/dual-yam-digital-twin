@@ -927,11 +927,12 @@ class Plant:
             self.cup_inertia0 = {n: self.model.body_inertia[self.body[n]].copy() for n in ("paper_cup", "plastic_cup")}
         self.model.geom_friction[:, 0] = self.geom_friction0
 
-    def held_cup_hits_dispenser(self, q: np.ndarray, grip: float) -> bool:
+    def held_cup_hits_dispenser(self, q: np.ndarray, grip: float, allow_side: bool = False, z_shift: float = 0.0) -> bool:
         """Would an upright cup, centred on this hand pose, touch the valve, spout or tank?
 
         The arm-only collision check ignores the cup, so a carry can be clear for the links and still
-        knock the valve with the cup wall. The cup is placed from the hand pose, not from the true cup."""
+        knock the valve with the cup wall. The cup is placed from the hand pose, not from the true cup.
+        A side grasp (hand x down) is checked only when the caller asks: the cup centre then sits at the TCP."""
         m = self.model
         saved = [(g, int(m.geom_contype[g]), int(m.geom_conaffinity[g])) for g in self.geoms_of[self.active_cup]]
         for g, _, _ in saved:
@@ -945,9 +946,13 @@ class Plant:
             s.qpos[a.g_qpos] = 0.5 * float(grip)
             mujoco.mj_kinematics(m, s)
             R = np.array(s.site_xmat[a.site]).reshape(3, 3)
-            if float(R[2, 0]) < 0.75:
+            x_up = float(R[2, 0])
+            side = bool(allow_side) and x_up <= -0.50
+            if x_up < 0.75 and not side:
                 return False
-            p = np.array(s.site_xpos[a.site])
+            p = np.array(s.site_xpos[a.site], dtype=float).copy()
+            if side:
+                p[2] = float(p[2]) + (0.5 * L.CUP_HEIGHT - L.CUP_GRASP_HEIGHT_ABOVE_BASE) + float(z_shift)
             qa = self.free_qadr[self.active_cup]
             s.qpos[qa: qa + 7] = [float(p[0]), float(p[1]), float(p[2]), 1.0, 0.0, 0.0, 0.0]
             mujoco.mj_kinematics(m, s)

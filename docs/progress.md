@@ -54,20 +54,20 @@ These commands were run on this working tree. Exit code 0 unless noted.
 
 A global step now waits until both arm lanes are free, and an arm step does not start while a global step is running. The nominal pour step already waited on the previous arm steps, and the selftest still passes. The solver line in the MJCF is `sim_station/physics_manifest.py`. The force sign is the same formula as before, called from `world_force_from_tau`.
 
-## Motion retest after the flip and the stamp
+## Motion retest after the mid-air handoff
 
 Nominal seed 0, paper, `Session.run` then `check_pass`. Not a Monte Carlo.
 
 | Level | Result | Cup | Flow | Sim time |
 |---|---|---|---|---|
-| 1 | pass | 4.5 mm | 6.95 s | 54 s |
-| 2 | pass | 10.3 mm | 6.95 s | 115 s |
-| 3 | pass | 10.3 mm | 6.95 s | 121 s |
-| 4 | pass | 4.5 mm | 6.96 s | 54 s |
-| 5 | pass | 13.5 mm | 6.94 s | 76 s |
+| 1 | pass | 3.4 mm | 6.95 s | 55 s |
+| 2 | pass | 7.9 mm | 6.94 s | 158 s |
+| 3 | pass | 9.2 mm | 6.95 s | 164 s |
+| 4 | pass | 4.1 mm | 6.95 s | 71 s |
+| 5 | pass | 13.8 mm | 6.94 s | 76 s |
 
-The Level 2 and 3 roll is still the wrist turning the cup while the fingers hold it. It is not a free tumble. The previous video crawled because one joint twitch stretched the whole arc; the roll is now timed from the joint travel, and the hand keeps sliding while it turns. After the cup is on the coaster the hand backs straight out before it rises, so the open fingers do not sweep the cup off. Level 5 pecks with the jaws at 62 mm. The wrist stays steep. A coarse stamp hit is fit from the fingertip pads only. The slide under the spout dips 4 mm so a cup that has leaned in the fingers does not meet the spout tip, then rises once the tip is over the mouth.
+Levels 2 and 3 still roll the cup with the wrist while the fingers hold it. It is not a free tumble. After the roll the other hand takes the cup in the air, lets it hang, and the first hand regrasps the middle. The cup is not set down. Level 4 closes on the centre of the knob, then closes around a circle until the handle stalls in the jaws. On this seed the handle is already at 45°. Level 5 pecks with the jaws at 62 mm. The wrist stays steep. The slide under the spout still dips 4 mm when the wrist can; the corridor is chosen so that dip is reachable.
 
 ## Not done
 
-Randomized rates were not rerun, so 79 / 42 / 42 / 21 / 12 % is still the last measured table, on `32b5d08`, not a claim about this branch. Physics ablations of the stack torque and the cup tether were not run (`stack_assist` can be turned off; that run was not done). No 100-trial benchmark. No Playwright run. No behavior cloning and no reinforcement learning. No hardware. No new measurements. `.github/workflows/sim.yml` and `pyproject.toml` are in the tree; the workflow has not been observed on GitHub, and the dependencies are not pinned to a lock solved on a clean machine. Level 2, 3 and 5 page videos were rendered again from passing nominal runs and have no audio stream. Netlify production deploy `6ae2cf06ea4ec78068a96329` is live. This branch is not pushed. The dance clips on the site are still silent.
+Randomized rates were not rerun, so 79 / 42 / 42 / 21 / 12 % is still the last measured table, on `32b5d08`, not a claim about the mid-air handoff or the circle search. Physics ablations of the stack torque and the cup tether were not run (`stack_assist` can be turned off; that run was not done). No 100-trial benchmark. No behavior cloning and no reinforcement learning. No hardware. No new physical measurements. `.github/workflows/sim.yml` and `pyproject.toml` are in the tree; the workflow has not been observed on GitHub, and the dependencies are not pinned to a lock solved on a clean machine. Scene-as-reset replay still fails. The flip is still an in-hand roll. The songs stay off the public site.

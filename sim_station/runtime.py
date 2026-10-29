@@ -209,7 +209,9 @@ class Ctx:
             bad = [h for h in hits if not self._benign(h) and tuple(sorted(h)) not in active]
             if bad:
                 raise PlanError(f"{arm} arm path collides at {k * traj.dt:.2f}s: {bad[0][0]} / {bad[0][1]}")
-            if arm == "cup" and self.bel.cup_in_hand and self.plant.held_cup_hits_dispenser(traj.q[k], w):
+            if arm == "cup" and self.bel.cup_in_hand and self.plant.held_cup_hits_dispenser(
+                    traj.q[k], w, allow_side=bool(self.scratch.get("watch_held_cup")),
+                    z_shift=float(self.scratch.get("spout_drop") or 0.0)):
                 raise PlanError(f"the held cup would bump the valve or the tank at {k * traj.dt:.2f}s")
             active = still_leaving(active, present)
 

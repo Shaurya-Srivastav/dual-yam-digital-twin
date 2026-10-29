@@ -17,7 +17,7 @@ from sim_station.kin import frame_from, rot_about
 from sim_station.motion import PlanError
 from sim_station.runtime import CTRL_STEPS, Ctx, SkillFault
 from sim_station.sensing import Baseline
-from sim_station.skills import HOLD_DZ, Z_UP, fmt_mm, side_frame
+from sim_station.skills import HOLD_DZ, Z_UP, cap_for, fmt_mm, s_close_cup, s_goto_rest, s_slide_in, side_frame
 
 TOP_GRASP_DEPTH = 0.008           # TCP sits this far below the top cup's base face
 PIN_BAND_BELOW_RIM = 0.0135       # tap pad centre below the top cup's rim (the funnel pad is 19 mm tall)
@@ -1084,6 +1084,412 @@ def s_flip_lift(ctx: Ctx):
     x_up = float(ctx.tcp("cup")[2, 0])
     return {"msg": (f"wrist rolled {np.degrees(abs(float(ctx.q('cup')[5]) - j6_0)):.0f} deg while rising "
                     f"(started {plan['ao']:+d} deg, the other way); hand x is {x_up:.2f} up, cup flat")}
+
+
+def _side_reachable(kin, xy, z, seeds) -> bool:
+    for tilt in (0.0, -20.0, -35.0):
+        for off in (0.0, -9.0, 15.0):
+            if kin.ik_multi(side_frame(kin, xy, z, off=off, tilt=tilt), seeds).ok:
+                return True
+    return False
+
+
+def _handover_spots(ctx: Ctx, T0: np.ndarray) -> list:
+    """Places where the cup can be held palm-up and both arms can take a side grasp on it."""
+    xy0 = np.asarray(T0[:2, 3], float)
+    stack = np.asarray(ctx.bel.stack_xy, float)
+    away = xy0 - stack
+    nrm = float(np.linalg.norm(away))
+    away = away / nrm if nrm > 1e-6 else np.array([-1.0, 0.0])
+    side = np.array([-away[1], away[0]])
+    xys = [xy0]
+    for dist, lat in ((0.08, 0.0), (0.12, 0.0), (0.08, 0.07), (0.08, -0.07)):
+        xys.append(xy0 + away * dist + side * lat)
+    z0 = float(T0[2, 3])
+    zs = []
+    for z in (z0, max(z0, 0.18), 0.22, 0.26):
+        if all(abs(z - u) > 0.02 for u in zs):
+            zs.append(float(z))
+    cup, tap = ctx.kin["cup"], ctx.kin["tap"]
+    sc = [ctx.q("cup"), np.array([0.0, 1.6, 1.1, 0.7, 0.0, 0.0])]
+    st = [ctx.q("tap"), np.array([0.6, 1.8, 1.3, 0.9, 0.0, 0.0]), np.array([0.4, 1.4, 1.0, 0.6, 0.0, 0.0])]
+    out = []
+    for xy in xys:
+        for z_tcp in zs:
+            hold = T0.copy()
+            hold[:2, 3] = xy
+            hold[2, 3] = z_tcp
+            if not cup.ik_multi(hold, sc).ok:
+                continue
+            # Fingers are 8 mm above the base. The pour grasp is mid-cup; the other hand takes a band above that.
+            z_mid = z_tcp - 0.008 + HOLD_DZ
+            z_tap = z_mid + 0.030
+            if _side_reachable(cup, xy, z_mid, sc) and _side_reachable(tap, xy, z_tap, st):
+                out.append({"xy": np.asarray(xy, float), "z_tcp": z_tcp, "z_mid": z_mid, "z_tap": z_tap})
+            if len(out) >= 4:
+                return out
+    return out
+
+
+
+def s_square_hold(ctx: Ctx):
+    """Keep the flipped cup in the fingers and carry it to a spot where the other hand can take it.
+
+    The flip leaves the fingers on the base. That hold cannot pass under the spout, so the cup is
+    not set down: it stays in the air and the hands trade it onto the ordinary mid-height grasp.
+    """
+    kin = ctx.kin["cup"]
+    T0 = ctx.tcp("cup")
+    if float(T0[2, 0]) < 0.90:
+        raise SkillFault(f"the cup is not upright in the hand (hand x {float(T0[2, 0]):.2f})")
+    spots = _handover_spots(ctx, T0)
+    if not spots:
+        raise SkillFault("neither arm can reach a mid-air handover for this cup")
+    w0 = ctx.width("cup")
+    last = "no path"
+    for spot in spots:
+        goal = T0.copy()
+        goal[:2, 3] = spot["xy"]
+        goal[2, 3] = spot["z_tcp"]
+        up = T0.copy()
+        up[2, 3] = max(float(T0[2, 3]) + 0.04, spot["z_tcp"] + 0.03)
+        for poses in ([T0, goal], [T0, up, goal]):
+            try:
+                traj = M.cart_move(kin, poses, ctx.q("cup"), v_cart=0.08, speed_scale=ctx.speed,
+                                   min_T=0.6, max_joint_step=0.32, timing="travel")
+                ctx.check_traj("cup", traj, other_q=L.REST_Q, grip_width=w0)
+            except PlanError as exc:
+                last = str(exc)
+                continue
+            ctx.monitor("cup", True)
+            yield from ctx.play("cup", traj)
+            ctx.monitor("cup", False)
+            if ctx.width("cup") > w0 + 0.004 and ctx.mon["cup"].grip_force < 1.5:
+                raise SkillFault("the cup slipped while it was carried to the handover")
+            ctx.scratch["handover"] = spot
+            ctx.scratch["palm_up"] = False
+            ctx.bel.cup_in_hand = True
+            return {"msg": (f"cup stays in the air at ({spot['xy'][0]:.3f}, {spot['xy'][1]:.3f}); "
+                            "the other hand takes it, it is not set down")}
+    raise SkillFault(f"no clear path to a mid-air handover ({last})")
+
+
+def _cradle_try(ctx: Ctx, xy, z: float, tilt: float, off: float):
+    """One side approach. Returns the close result, or None if this direction cannot get onto the cup."""
+    kin = ctx.kin["tap"]
+    seeds = [ctx.q("tap"), np.array([0.6, 1.8, 1.3, 0.9, 0.0, 0.0]), np.array([0.4, 1.4, 1.0, 0.6, 0.0, 0.0])]
+    T_g = side_frame(kin, xy, z, off=off, tilt=tilt, depth=0.0)
+    a = T_g[:3, 2]
+    T_pre = T_g.copy()
+    T_pre[:3, 3] = T_g[:3, 3] - a * 0.09
+    T_hi = T_pre.copy()
+    T_hi[2, 3] = float(T_pre[2, 3]) + 0.08
+    rp = kin.ik_multi(T_pre, seeds)
+    rh = kin.ik_multi(T_hi, seeds + ([rp.q] if rp.ok else []))
+    rg = kin.ik_multi(T_g, seeds + ([rp.q] if rp.ok else []))
+    if not (rp.ok and rh.ok and rg.ok):
+        return None
+    try:
+        app = M.via_move([ctx.q("tap"), rh.q, rp.q], speed_scale=ctx.speed, min_T=0.7)
+        ctx.check_traj("tap", app, grip_width=L.GRIPPER_MAX_OPEN_M)
+    except PlanError:
+        return None
+    yield from ctx.grip_open("tap", L.GRIPPER_MAX_OPEN_M)
+    yield from ctx.play("tap", app)
+    slide = M.cart_move(kin, [ctx.tcp("tap"), T_g], ctx.q("tap"), v_cart=0.03, speed_scale=ctx.speed, min_T=0.6)
+    ctx.monitor("tap", True)
+    for k in range(len(slide)):
+        # The cup is already held, so a firm push means this direction is into the other hand, not onto the wall.
+        if float(-(ctx.mon["tap"].force @ a)) > 12.0:
+            ctx.monitor("tap", False)
+            ctx.q_cmd["tap"] = ctx.q("tap")
+            ctx.event("cradle jammed before the close")
+            return None
+        ctx.q_cmd["tap"] = slide.q[k]
+        ctx.plant.command_arm("tap", slide.q[k], slide.qd[k])
+        yield
+    ctx.monitor("tap", False)
+    yield from ctx.wait(0.12)
+    res = yield from ctx.grip_close("tap", cap_for(ctx), rate=0.04)
+    # The first close often lands on a chord. A narrow stall means the jaws are off the cup's axis,
+    # and letting go of the base then cocks the cup. Step along the approach until the stall is the diameter.
+    r_band = 0.035
+    sign, s_prev = 1.0, None
+    for _ in range(4):
+        w = res["width"]
+        if not (res["stalled"] and 0.050 < w < 0.082):
+            break
+        s = float(np.sqrt(max(r_band * r_band - (0.5 * w) ** 2, 0.0)))
+        if s <= 0.004:
+            ctx.scratch["cradle_fr"] = {"a": a, "grasp": ctx.tcp("tap").copy()}
+            ctx.event(f"cradle centred, jaws {fmt_mm(w)}")
+            return res
+        if s_prev is not None and s > s_prev + 0.002:
+            sign = -sign
+        s_prev = s
+        ctx.event(f"cradle chord {fmt_mm(w)}: moving {sign * s * 1000:.0f} mm along the approach")
+        yield from ctx.grip_open("tap", L.GRIPPER_MAX_OPEN_M, cap=6.0)
+        T0c = ctx.tcp("tap")
+        T1c = T0c.copy()
+        T1c[:3, 3] = T0c[:3, 3] + a * (sign * s)
+        try:
+            step = M.cart_move(kin, [T0c, T1c], ctx.q("tap"), v_cart=0.03, speed_scale=ctx.speed, min_T=0.3, max_joint_step=0.25)
+            ctx.check_traj("tap", step, grip_width=L.GRIPPER_MAX_OPEN_M)
+        except PlanError:
+            sign = -sign
+            continue
+        ctx.monitor("tap", True)
+        jammed = False
+        for k in range(len(step)):
+            if float(-(ctx.mon["tap"].force @ a)) > 12.0:
+                jammed = True
+                break
+            ctx.q_cmd["tap"] = step.q[k]
+            ctx.plant.command_arm("tap", step.q[k], step.qd[k])
+            yield
+        ctx.monitor("tap", False)
+        if jammed:
+            sign = -sign
+            continue
+        res = yield from ctx.grip_close("tap", cap_for(ctx), rate=0.04)
+    w = res.get("width", 0.0)
+    ctx.event(f"cradle gave up, jaws {fmt_mm(w) if res.get('stalled') else 'not stalled'}")
+    yield from ctx.grip_open("tap", L.GRIPPER_MAX_OPEN_M, cap=6.0)
+    back = ctx.tcp("tap").copy()
+    away = back.copy()
+    away[:3, 3] = back[:3, 3] - a * 0.07
+    try:
+        retreat = M.cart_move(kin, [back, away], ctx.q("tap"), v_cart=0.06, speed_scale=ctx.speed, min_T=0.3, max_joint_step=0.3)
+        ctx.check_traj("tap", retreat, grip_width=L.GRIPPER_MAX_OPEN_M)
+        yield from ctx.play("tap", retreat)
+    except PlanError:
+        pass
+    return None
+
+
+def s_cradle(ctx: Ctx):
+    """Tap arm takes the upright cup in the air, above the band the cup arm will use to pour."""
+    h = ctx.scratch.get("handover")
+    if not h:
+        raise SkillFault("the cup arm has not offered the cup")
+    xy, z = h["xy"], h["z_tap"]
+    # The cup hand occupies one side of the base. Try the other sides, steeper first so the wrist stays above that hand.
+    # A tilted cradle cocks the cup when the first hand lets go. Level jaws keep it upright.
+    for tilt, off in ((0.0, 0.0), (0.0, -25.0), (0.0, 25.0), (0.0, -50.0), (0.0, 50.0),
+                      (-12.0, 0.0), (-12.0, -30.0), (-25.0, -30.0)):
+            ctx.event(f"cradle tilt {tilt:.0f} off {off:.0f}")
+            res = yield from _cradle_try(ctx, xy, z, tilt, off)
+            if res is not None:
+                return {"msg": f"other hand has the cup, jaws {fmt_mm(res['width'])} with {res['force']:.1f} N"}
+    raise SkillFault(f"no cradle approach could take the cup at ({xy[0]:.3f}, {xy[1]:.3f}, {z:.3f})")
+
+
+def _play_kept(ctx: Ctx, traj) -> None:
+    """Follow a tap move that is holding the cup. Stop if the jaws unload: the cup has left the hand."""
+    ctx.monitor("tap", True)
+    lost_at = None
+    for k in range(len(traj)):
+        ctx.q_cmd["tap"] = traj.q[k]
+        ctx.plant.command_arm("tap", traj.q[k], traj.qd[k])
+        yield
+        if float(ctx.mon["tap"].grip_force) > 0.45:
+            lost_at = None
+        elif lost_at is None:
+            lost_at = ctx.plant.time
+        elif ctx.plant.time - lost_at > 0.18:
+            ctx.q_cmd["tap"] = ctx.q("tap")
+            ctx.monitor("tap", False)
+            raise SkillFault("the cup slipped out of the cradle while it was carried clear")
+    ctx.monitor("tap", False)
+
+
+def s_cradle_shift(ctx: Ctx):
+    """Carry the cup out of the cup arm's wrist, still in the air, so that hand can take the middle."""
+    h = ctx.scratch.get("handover")
+    if not h:
+        raise SkillFault("there is no cup in the cradle")
+    # Let go of the base before the cradle moves. Dragging the cup out of that hand cocks it,
+    # and a cocked cup meets the tank on the way under the spout.
+    yield from ctx.grip_open("cup", L.GRIPPER_MAX_OPEN_M, rate=0.03, cap=6.0)
+    yield from ctx.wait(0.25)
+    ctx.bel.cup_in_hand = False
+    # The flip leaves the cup a little cocked. A few millimetres of slack lets it hang straight without falling out of the jaws.
+    w_tap = ctx.width("tap")
+    ctx.plant.command_gripper("tap", min(w_tap + 0.004, 0.076), cap_n=2.0, rate=0.01)
+    yield from ctx.wait(0.7)
+    settled = yield from ctx.grip_close("tap", cap_for(ctx), rate=0.04)
+    if not (settled["stalled"] and 0.050 < settled["width"] < 0.082):
+        raise SkillFault(f"the cup slipped while it settled in the cradle (jaws {fmt_mm(settled['width'])})")
+    ctx.event(f"cradle settled, jaws {fmt_mm(settled['width'])}")
+    kin = ctx.kin["tap"]
+    # Slide down off the rim onto the wall so the later carry does not swing the cup out of the fingers.
+    Td = ctx.tcp("tap")
+    Tlow = Td.copy()
+    Tlow[2, 3] = float(Td[2, 3]) - 0.035
+    try:
+        down = M.cart_move(kin, [Td, Tlow], ctx.q("tap"), v_cart=0.02, speed_scale=ctx.speed, min_T=0.6, max_joint_step=0.25)
+        ctx.check_traj("tap", down, grip_width=ctx.width("tap"))
+        yield from ctx.play("tap", down)
+        seated = yield from ctx.grip_close("tap", cap_for(ctx), rate=0.04)
+        if seated["stalled"] and 0.050 < seated["width"] < 0.078:
+            ctx.event(f"cradle slid onto the wall, jaws {fmt_mm(seated['width'])}")
+    except PlanError:
+        pass
+    # A stall at the rim means the mid band, which the spout path is built around, is one
+    # grasp-height below that. Aiming just under the tap leaves the fingers on the upper
+    # wall, and the taper then squeezes the cup down onto the mat.
+    w_now = float(ctx.width("tap"))
+    span = max(2.0 * L.CUP_RIM_RADIUS - L.CUP_HOLD_WIDTH_ON_AXIS, 1e-4)
+    at_mid = float(np.clip((2.0 * L.CUP_RIM_RADIUS - w_now) / span, 0.0, 1.0))
+    below = (1.0 - at_mid) * (L.CUP_HEIGHT - HOLD_DZ) + at_mid * 0.012
+    h["z_mid"] = float(ctx.tcp("tap")[2, 3]) - below
+    T0 = ctx.tcp("tap")
+    # The other hand is still against the cup. A sideways carry scrapes the cup out of these jaws.
+    # Lift straight up first, clear of that hand, and come back down after the carry.
+    raised = 0.0
+    for lift in (0.045, 0.030):
+        Th = T0.copy()
+        Th[2, 3] = float(T0[2, 3]) + lift
+        try:
+            up = M.cart_move(kin, [T0, Th], ctx.q("tap"), v_cart=0.015, speed_scale=ctx.speed, min_T=0.7, max_joint_step=0.25)
+            ctx.check_traj("tap", up, grip_width=ctx.width("tap"))
+        except PlanError:
+            continue
+        yield from _play_kept(ctx, up)
+        raised = float(ctx.tcp("tap")[2, 3] - T0[2, 3])
+        if raised > 0.02:
+            ctx.event(f"cradle lifted the cup {raised * 1000:.0f} mm off the other hand")
+            T0 = ctx.tcp("tap")
+            break
+        raised = 0.0
+    d = kin.mount[:2] - T0[:2, 3]
+    nrm = float(np.linalg.norm(d))
+    d = d / nrm if nrm > 1e-6 else np.array([0.0, -1.0])
+    w = ctx.width("tap")
+    last = "no shift"
+    for dist, dz in ((0.12, 0.02), (0.09, 0.03), (0.06, 0.02)):
+        T1 = T0.copy()
+        T1[0, 3] = float(T0[0, 3] + d[0] * dist)
+        T1[1, 3] = float(T0[1, 3] + d[1] * dist)
+        T1[2, 3] = float(T0[2, 3] + dz)
+        try:
+            traj = M.cart_move(kin, [T0, T1], ctx.q("tap"), v_cart=0.025, speed_scale=ctx.speed, min_T=0.8, max_joint_step=0.30)
+            ctx.check_traj("tap", traj, grip_width=w)
+        except PlanError as exc:
+            last = str(exc)
+            continue
+        yield from _play_kept(ctx, traj)
+        if ctx.width("tap") > w + 0.006:
+            raise SkillFault("the cup slipped while the cradle carried it clear")
+        if raised > 0.02:
+            Tback = ctx.tcp("tap").copy()
+            Tback[2, 3] = float(Tback[2, 3]) - raised
+            try:
+                down_back = M.cart_move(kin, [ctx.tcp("tap"), Tback], ctx.q("tap"), v_cart=0.02,
+                                        speed_scale=ctx.speed, min_T=0.5, max_joint_step=0.25)
+                ctx.check_traj("tap", down_back, grip_width=w)
+                yield from _play_kept(ctx, down_back)
+            except PlanError:
+                pass
+        rose = float(ctx.tcp("tap")[2, 3] - (T0[2, 3] - raised))
+        h["xy"] = ctx.tcp("tap")[:2, 3].copy()
+        h["z_mid"] = float(h["z_mid"]) + rose
+        h["z_tap"] = float(ctx.tcp("tap")[2, 3])
+        return {"msg": f"cup carried clear to ({h['xy'][0]:.3f}, {h['xy'][1]:.3f}), still in the air"}
+    raise SkillFault(f"the cradle cannot carry the cup clear of the other hand ({last})")
+
+
+def s_regrasp_mid(ctx: Ctx):
+    """Let go of the base, and take the cup again at the height the spout carry already uses."""
+    h = ctx.scratch.get("handover")
+    if not h:
+        raise SkillFault("there is no cup waiting in the air")
+    kin = ctx.kin["cup"]
+    T0 = ctx.tcp("cup")
+    a = T0[:3, 2].copy()
+    a[2] = 0.0
+    nrm = float(np.linalg.norm(a))
+    a = a / nrm if nrm > 1e-6 else np.array([-1.0, 0.0, 0.0])
+    yield from ctx.grip_open("cup", L.GRIPPER_MAX_OPEN_M, rate=0.025, cap=6.0)
+    try:
+        fr = ctx.side_frames("cup", h["xy"], h["z_mid"], depth=0.002, standoff=0.05,
+                             tilts=(0.0, -12.0, -25.0), offsets=(0.0, -9.0, 10.0, -18.0))
+    except PlanError as exc:
+        raise SkillFault(str(exc))
+    ctx.scratch["cup_fr"] = fr
+    # Backing straight out of the palm-up hold drives a wrist joint into its stop.
+    # Leave on whichever clear path reaches the side-grasp standoff. The cup is in the other hand.
+    last = "no exit"
+    reached = False
+    up = T0.copy()
+    up[2, 3] = float(T0[2, 3]) + 0.16
+    mount = kin.mount[:2] - T0[:2, 3]
+    mount = mount / max(float(np.linalg.norm(mount)), 1e-6)
+    away = up.copy()
+    away[:2, 3] = T0[:2, 3] + mount * 0.14
+    away[2, 3] = max(float(up[2, 3]), 0.26)
+    back = T0.copy()
+    back[:3, 3] = T0[:3, 3] - a * 0.05
+    back[2, 3] = float(T0[2, 3]) + 0.04
+    plans = []
+    for name, poses in (
+        ("up and away", [T0, up, away, fr["hi"], fr["pre"]]),
+        ("up and across", [T0, up, fr["hi"], fr["pre"]]),
+        ("back and across", [T0, back, fr["pre"]]),
+        ("straight to the standoff", [T0, fr["pre"]]),
+    ):
+        try:
+            plans.append((name, M.cart_move(kin, poses, ctx.q("cup"), v_cart=0.07, speed_scale=ctx.speed,
+                                            min_T=0.7, max_joint_step=0.34)))
+        except PlanError as exc:
+            last = f"{name}: {exc}"
+    plans.append(("joints", None))
+    for name, app in plans:
+        try:
+            if app is None:
+                app = M.via_move([ctx.q("cup"), fr["q"]["hi"], fr["q"]["pre"]], speed_scale=ctx.speed, min_T=0.8)
+            ctx.check_traj("cup", app, grip_width=L.GRIPPER_MAX_OPEN_M)
+        except PlanError as exc:
+            last = f"{name}: {exc}"
+            continue
+        ctx.event(f"regrasp leaves on the {name} path")
+        yield from ctx.play("cup", app)
+        reached = True
+        break
+    if not reached:
+        raise SkillFault(f"the cup hand cannot back out for the regrasp ({last})")
+    yield from s_slide_in(ctx)
+    ctx.scratch["wide_search"] = True
+    res = yield from s_close_cup(ctx)
+    ctx.scratch["wide_search"] = False
+    ctx.scratch["palm_up"] = False
+    ctx.scratch["watch_held_cup"] = True
+    # A stall wider than the mid-cup diameter means the fingers are above that band, so the cup hangs lower than the spout path expects.
+    extra = 0.5 * ctx.width("cup") - 0.5 * L.CUP_HOLD_WIDTH_ON_AXIS
+    high = 0.0 if extra <= 0.0005 else float(min(extra / 0.10, 0.030))
+    ctx.scratch["spout_drop"] = -high
+    if high > 0.001:
+        ctx.event(f"fingers are {high * 1000:.0f} mm above the mid band; the spout path is raised to match")
+    ctx.bel.cup_in_hand = True
+    return {"msg": f"cup regrasped in the air at mid height; {res['msg']}"}
+
+
+def s_tap_clear(ctx: Ctx):
+    """The cup arm has the pour grasp. Open the cradle and fold the tap arm away."""
+    fr = ctx.scratch.get("cradle_fr")
+    yield from ctx.grip_open("tap", L.GRIPPER_MAX_OPEN_M, rate=0.03, cap=6.0)
+    if fr is not None:
+        T0 = ctx.tcp("tap")
+        T1 = T0.copy()
+        T1[:3, 3] = T0[:3, 3] - fr["a"] * 0.08 + Z_UP * 0.04
+        try:
+            traj = M.cart_move(ctx.kin["tap"], [T0, T1], ctx.q("tap"), v_cart=0.06, speed_scale=ctx.speed,
+                               min_T=0.4, max_joint_step=0.30)
+            ctx.check_traj("tap", traj, grip_width=L.GRIPPER_MAX_OPEN_M)
+            yield from ctx.play("tap", traj)
+        except PlanError:
+            pass
+    return (yield from s_goto_rest(ctx, "tap"))
 
 
 def s_flip_set(ctx: Ctx):

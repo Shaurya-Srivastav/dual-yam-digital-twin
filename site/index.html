@@ -8,52 +8,85 @@
 <meta property="og:title" content="Dual-YAM digital twin">
 <meta property="og:description" content="Two robot arms, one dry dispenser, five levels of uncertainty, no cameras.">
 <style>
-:root{--bg:#0b0d12;--panel:#12161f;--panel2:#171c28;--line:#252c3c;--text:#e8ebf2;--muted:#8d96ab;--acc:#7c8cff;--cup:#4fb3ff;--tap:#ffb454;--ok:#4cd08a;--warn:#f2c14e;--bad:#ff6b6b;--r:14px}
-*{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#1a2140 0,transparent 60%),var(--bg);color:var(--text);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif}
-a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
-nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);background:rgba(11,13,18,.78);border-bottom:1px solid var(--line)}
-nav div{max-width:1120px;margin:0 auto;padding:12px 20px;display:flex;gap:22px;align-items:center;flex-wrap:wrap}
-nav b{margin-right:auto}nav a{color:var(--muted);font-size:14px}nav a:hover{color:var(--text);text-decoration:none}
-section{max-width:1120px;margin:0 auto;padding:72px 20px 0}
-h1{font-size:clamp(34px,6vw,60px);line-height:1.08;margin:0 0 16px;letter-spacing:-.02em}
-h2{font-size:30px;margin:0 0 8px;letter-spacing:-.01em}h3{margin:0 0 6px;font-size:18px}
-.lead{font-size:19px;color:#c3cadb;max-width:760px}.muted{color:var(--muted)}.small{font-size:14px}
-.btn{display:inline-block;padding:10px 18px;border-radius:10px;font-weight:600;margin:6px 10px 0 0;border:1px solid var(--line);background:var(--panel2);color:var(--text)}
-.btn.p{background:var(--acc);border-color:var(--acc);color:#0b0d18}.btn:hover{text-decoration:none;filter:brightness(1.12)}
-.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.chip{padding:3px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:13px;color:#c3cadb}
-.grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));margin-top:22px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;transition:transform .15s,border-color .15s}
-.card:hover{transform:translateY(-2px);border-color:#3a4566}
-.vid{position:relative;cursor:pointer;background:#000;aspect-ratio:16/9}.vid video{width:100%;height:100%;display:block;object-fit:cover}
-.vid .play{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(transparent 55%,rgba(0,0,0,.55))}
-.vid .play span{width:58px;height:58px;border-radius:50%;background:rgba(124,140,255,.92);display:grid;place-items:center;font-size:22px;color:#0b0d18;padding-left:4px}
-.card .body{padding:14px 16px 16px}.tag{display:inline-block;font-size:12px;padding:2px 9px;border-radius:999px;margin-right:6px;font-weight:600}
-.tag.ok{background:rgba(76,208,138,.14);color:var(--ok)}.tag.warn{background:rgba(242,193,78,.14);color:var(--warn)}.tag.bad{background:rgba(255,107,106,.14);color:var(--bad)}
-dialog{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:16px;padding:0;width:min(1100px,94vw)}
-dialog::backdrop{background:rgba(5,6,10,.82);backdrop-filter:blur(4px)}
-dialog video{width:100%;display:block;background:#000;border-radius:16px 16px 0 0}
-dialog .cap{padding:14px 18px 18px}dialog button{float:right;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 14px;cursor:pointer}
-.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:22px}
-.flow div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;position:relative}
-.flow div b{display:block;color:var(--acc);font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
-.cols{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));margin-top:22px}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
-table{width:100%;border-collapse:collapse;font-size:15px}th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted);font-weight:500;font-size:13px}
-.bar{height:8px;border-radius:5px;background:#222a3b;overflow:hidden;min-width:90px}.bar i{display:block;height:100%}
-ul{padding-left:20px;margin:8px 0}li{margin:4px 0;color:#c3cadb}code{background:var(--panel2);border:1px solid var(--line);padding:1px 6px;border-radius:6px;font-size:13.5px}
-pre{background:#0d1017;border:1px solid var(--line);border-radius:12px;padding:16px;overflow:auto;font-size:13.5px;line-height:1.55}
-footer{max-width:1120px;margin:80px auto 0;padding:24px 20px 60px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+:root{
+  --bg:#f4f1ea;--paper:#fbf9f4;--ink:#1b1814;--soft:#3c3832;--muted:#6a635a;--line:#ddd6c8;
+  --accent:#8d3b22;--ok:#1c6b43;--warn:#8a5a12;--bad:#922e2e;
+  --serif:"Iowan Old Style",Palatino,"Palatino Linotype","Book Antiqua",Georgia,serif;
+  --sans:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 var(--sans);font-feature-settings:"kern","liga"}
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.skip{position:absolute;left:12px;top:-40px;background:var(--ink);color:var(--bg);padding:8px 12px;z-index:40}
+.skip:focus{top:12px}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{text-decoration-thickness:2px}
+nav{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);border-bottom:1px solid var(--line)}
+nav div{max-width:1080px;margin:0 auto;padding:14px 24px;display:flex;gap:22px;align-items:baseline;flex-wrap:wrap}
+nav strong{margin-right:auto;font-family:var(--serif);font-weight:560;font-size:17px;letter-spacing:-.01em}
+nav a{color:var(--muted);font-size:14px;text-decoration:none}
+nav a:hover{color:var(--ink)}
+main{display:block}
+section{max-width:1080px;margin:0 auto;padding:88px 24px 0}
+.kicker{margin:0 0 14px;color:var(--accent);font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:650}
+h1{font-family:var(--serif);font-weight:500;font-size:clamp(46px,7vw,84px);line-height:.96;letter-spacing:-.03em;margin:0 0 22px;max-width:16ch}
+h2{font-family:var(--serif);font-weight:500;font-size:clamp(32px,4vw,44px);line-height:1.05;letter-spacing:-.02em;margin:0 0 12px}
+h3{font-family:var(--serif);font-weight:560;font-size:22px;line-height:1.2;margin:0 0 8px}
+.lead{font-size:19px;line-height:1.55;color:var(--soft);max-width:42rem}
+.muted{color:var(--muted)}.small{font-size:14.5px;line-height:1.55}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.btn{display:inline-block;padding:11px 16px;border:1px solid var(--ink);background:transparent;color:var(--ink);font:600 14px/1 var(--sans);text-decoration:none;cursor:pointer}
+.btn.p{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:28px;padding-top:18px;border-top:1px solid var(--line)}
+.chip{font-size:12.5px;letter-spacing:.02em;color:var(--soft)}
+.chip:not(:last-child)::after{content:"·";margin-left:8px;color:var(--line)}
+.grid{display:grid;gap:28px 22px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));margin-top:28px}
+.card{background:var(--paper);border:1px solid var(--line);display:flex;flex-direction:column}
+.vid{position:relative;background:#111;aspect-ratio:16/9}
+.vid video{width:100%;height:100%;display:block;object-fit:cover}
+.vid .play{position:absolute;inset:0;border:0;background:linear-gradient(transparent 50%,rgba(0,0,0,.45));color:#fff;cursor:pointer;display:grid;place-items:end start;padding:14px;font:600 13px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase}
+.vid .play:hover,.vid .play:focus-visible{background:linear-gradient(transparent 40%,rgba(141,59,34,.72))}
+.card .body{padding:16px 16px 18px}
+.tag{display:inline-block;margin-top:10px;font-size:12px;letter-spacing:.04em;text-transform:uppercase;font-weight:650}
+.tag.ok{color:var(--ok)}.tag.warn{color:var(--warn)}.tag.bad{color:var(--bad)}
+dialog{border:0;padding:0;width:min(1040px,94vw);background:var(--paper);color:var(--ink);box-shadow:0 24px 80px rgba(27,24,20,.28)}
+dialog::backdrop{background:rgba(27,24,20,.72)}
+dialog video{width:100%;display:block;background:#000}
+dialog .cap{padding:16px 18px 20px}
+dialog .cap button{float:right;background:transparent;color:var(--ink);border:1px solid var(--line);padding:6px 12px;cursor:pointer;font:inherit}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0;margin-top:28px;border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.flow div{padding:16px 16px 18px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--paper)}
+.flow div b{display:block;color:var(--accent);font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;font-family:var(--sans)}
+.cols{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:28px}
+.panel{background:var(--paper);border:1px solid var(--line);padding:18px 20px 8px}
+table{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:550;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.bar{height:3px;background:var(--line);min-width:88px;margin-top:8px}.bar i{display:block;height:100%}
+ul{padding-left:18px;margin:8px 0 14px}li{margin:5px 0;color:var(--soft)}
+code{font-family:var(--mono);font-size:.86em;background:#efeae1;padding:1px 5px}
+pre{background:#1b1814;color:#f4f1ea;padding:18px 18px;overflow:auto;font:13.5px/1.6 var(--mono)}
+footer{max-width:1080px;margin:96px auto 0;padding:22px 24px 64px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
 .k{color:var(--ok)}.w{color:var(--warn)}.b{color:var(--bad)}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}
 </style>
 </head>
 <body>
-<nav><div><b>Dual-YAM digital twin</b><a href="#papers">Papers</a><a href="#levels">Levels</a><a href="#dance">Dance</a><a href="#how">How it works</a><a href="#status">Honest status</a><a href="#proof">Checks</a><a href="#run">Run it</a><a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">GitHub</a></div></nav>
-
-<section style="padding-top:64px">
-  <h1>Two arms. One dry dispenser.<br><span style="color:var(--acc)">No cameras.</span></h1>
+<a class="skip" href="#content">Skip to content</a>
+<nav><div><strong>Dual-YAM digital twin</strong><a href="#papers">Papers</a><a href="#levels">Levels</a><a href="#dance">Dance</a><a href="#how">How it works</a><a href="#status">Status</a><a href="#proof">Checks</a><a href="#run">Run it</a><a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">GitHub</a></div></nav>
+<main id="content">
+<section style="padding-top:72px">
+  <p class="kicker">Simulation only · nothing here has run on the arms</p>
+  <h1>Two arms. One dry dispenser. No cameras.</h1>
   <p class="lead">A MuJoCo simulation of a two-arm (I2RT YAM) cup station. One arm brings a paper or plastic cup under the spout, the other lifts a 360° lever, and a timer counts 7 seconds. No water is in the model. The cup is then served into a coaster. Skills read joint position, velocity, torque and gripper width. Nothing on this page has been run on the physical arms.</p>
-  <a class="btn p" href="#levels">Watch the five levels</a><a class="btn" href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">Source code</a><a class="btn" href="#run">Run the live dashboard</a>
+  <div class="actions"><a class="btn p" href="#levels">Watch the five levels</a><a class="btn" href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">Source code</a><a class="btn" href="#run">Run the dashboard</a></div>
   <div class="chips"><span class="chip">MuJoCo 3</span><span class="chip">MIT-mode PD + gravity feed-forward</span><span class="chip">torque-residual contact sensing</span><span class="chip">mink IK</span><span class="chip">set-membership cup localisation</span><span class="chip">beat tracking</span><span class="chip">Monte Carlo referee</span></div>
 </section>
 
@@ -75,7 +108,7 @@ footer{max-width:1120px;margin:80px auto 0;padding:24px 20px 60px;border-top:1px
         <li><a href="https://tlips.be/revisiting-proprioception-for-articulated-manipulation/">Revisiting Proprioceptive Sensing for Articulated Object Manipulation</a> — Lips and wyffels, ICRA 2023 workshop. Estimate a joint from the gripper pose while in contact. Slip between gripper and handle is the failure they name.</li>
         <li><a href="https://kormushev.com/papers/Jamali_OCEANS-2013.pdf">Contact State Estimation using Machine Learning</a> — Jamali, Kormushev, Caldwell, OCEANS 2013. <a href="https://doi.org/10.23919/oceans.2013.6740992">DOI</a>. Classify no contact, on-axis, and off-centre contact on a T-bar valve from force and torque.</li>
       </ul>
-      <p class="small muted">What runs here: the fingertip stops at about 0.9 N, under the roughly 1.5 N it takes to turn the swivel, then the handle yaw is solved from the known hand and handle shapes. The threshold is still below a learned contact classifier.</p>
+      <p class="small muted">What runs here: the tap arm closes on the centre of the knob and stops at a 20 mm gap, so the stem is felt and not spun. It then closes at points around a 24 mm circle. A close that stalls with the handle in the jaws is the radius; an empty close is not. That is a contact search, not a learned classifier, and it does not estimate yaw from the shape of one touch.</p>
     </div>
     <div class="panel"><h3>Turning a cup over with one arm</h3>
       <ul class="small">
@@ -110,11 +143,11 @@ footer{max-width:1120px;margin:80px auto 0;padding:24px 20px 60px;border-top:1px
   </div>
   <div class="cols">
     <div class="panel"><h3>Finding the lever without moving it</h3><p class="small muted">From <a href="https://arxiv.org/abs/2509.12969">contact-pause grasping</a> and <a href="https://tlips.be/revisiting-proprioception-for-articulated-manipulation/">proprioceptive articulated-object estimation</a>: set the threshold above noise but below breakaway. <a href="https://kormushev.com/papers/Jamali_OCEANS-2013.pdf">Jamali, Kormushev and Caldwell</a> classify T-bar contact the same way, from force rather than vision.</p>
-      <ul class="small"><li>A fingertip circles the valve and stops at about 0.9 N; the swivel needs about 1.5 N to turn.</li><li>The handle yaw is solved from the known hand and handle shapes (oriented-box intersection), not a fixed offset.</li><li>The finger pushes it to about 45°, backs off and touches again to confirm; if it is lost it searches again.</li><li>The swivel turns a full 360°; tested from −170° to 175°.</li></ul></div>
+      <ul class="small"><li>Close on the centre of the knob and stop at a 20 mm gap. That confirms the stem without spinning it.</li><li>Open, then close at points around a 24 mm circle with the jaws at 50 mm. A stall near 15 mm, with a few newtons of force, means the handle is in the jaws. A close on nothing is not.</li><li>If that direction is more than about 8° from the pour angle, the arm opens and closes on the known 45° grip. The handle is not dragged around the knob.</li><li>On the nominal run the handle is already at 45°, so the park is not needed. The old fingertip sweep is not what this build runs.</li></ul></div>
     <div class="panel"><h3>Finding the cup without cameras</h3><p class="small muted"><a href="https://doi.org/10.1109/tro.2017.2707092">Vezzani et al.</a> keep a belief and update it from contact. <a href="https://arxiv.org/abs/2205.04697">Murali, Dahiya and Kaboli</a> and <a href="https://doi.org/10.1109/icra57385.2026.11697596">Brudermüller et al.</a> choose the next touch by information gain.</p>
       <ul class="small"><li>Pecks from above on a coarse grid until something stands up. The approach is nearly vertical, and a miss stops at 8 cm, so the wrist housing never drops onto the cup.</li><li>Every peck rules out centres the arm and cup models cannot explain. The next peck splits the centres still in play about in half.</li><li>The fit is set-membership. It is not the particle filter in the 2017 paper, and it does not estimate expected entropy.</li></ul></div>
     <div class="panel"><h3>The one-arm flip</h3><p class="small muted">The wrist is turned the other way, about −65° off the arm's line and 8° down, before the fingers touch the cup. <a href="https://arxiv.org/abs/2210.05068">Gravitational pivoting</a> is the paper alternative; this roll does not use it.</p>
-      <ul class="small"><li>The cup is held by its base band. Because the hand is already in the flip attitude, the lift itself rolls the cup over.</li><li>The roll is a Cartesian path: rise clear of the stack, slide 9 cm off it, roll 170° (the last 10° is past the wrist), then lower. One arm only.</li><li>The wrist housing cannot follow the base the last few centimetres, so the cup is released a few centimetres up and drops onto its base.</li></ul></div>
+      <ul class="small"><li>The cup is held by its base band. Because the hand is already in the flip attitude, the lift itself rolls the cup over.</li><li>The roll is a Cartesian path: rise clear of the stack, slide off it, roll 170°, then lower. One arm only. The cup stays clamped; it does not tumble under gravity.</li><li>The other hand takes the cup in the air. A little slack lets it hang upright, the first hand regrasps the middle, and the cup goes under the spout. It is not set down.</li></ul></div>
     <div class="panel"><h3>Side grasp that does not push the cup</h3><ul class="small"><li>Slides in with open jaws and complies sideways to contact force so the funnel pads centre the hand.</li><li>On closing, the stall width gives the chord 2·√(r²−s²): how far off the cup's axis the hand is, so depth is servoed from touch alone.</li><li>Force caps per grip; no weld, no snap.</li></ul></div>
   </div>
 </section>
@@ -131,10 +164,10 @@ footer{max-width:1120px;margin:80px auto 0;padding:24px 20px 60px;border-top:1px
         <tr><td>3 Stack, height unknown (3–11 cups)</td><td class="b">42 %</td><td>95 %</td><td><div class="bar"><i style="width:42%;background:var(--bad)"></i></div></td></tr>
         <tr><td>4 Lever angle unknown</td><td class="b">21 %</td><td>95 %</td><td><div class="bar"><i style="width:21%;background:var(--bad)"></i></div></td></tr>
         <tr><td>5 Cup anywhere</td><td class="b">12 %</td><td>90 %</td><td><div class="bar"><i style="width:12%;background:var(--bad)"></i></div></td></tr></table>
-      <p class="small muted">Measured on the code that is deployed (Oct 28, 2026). Every level misses its target.</p></div>
+      <p class="small muted">24 trials per level, from the earlier Monte Carlo. Not rerun after the mid-air handoff or the circle-of-closes search. Every level misses its target.</p></div>
     <div class="panel"><h3>Nominal runs (no randomization)</h3>
       <table><tr><th>Level</th><th>Result</th></tr>
-        <tr><td>1 to 5</td><td><span class="tag ok">pass every referee check</span> cup 3–13 mm from the coaster centre, flow 6.94–6.96 s</td></tr>
+        <tr><td>1 to 5</td><td><span class="tag ok">pass every referee check</span> nominal paper, seed 0: cups 3.4, 7.9, 9.2, 4.1 and 13.8 mm, flow 6.94–6.95 s. Levels 2 and 3 pass the cup across in the air.</td></tr>
         <tr><td>2, 3</td><td><span class="tag ok">stack never touched by an arm link or housing</span> the stack now stands on the coaster spot, as on the real station</td></tr>
         <tr><td>Replay</td><td><span class="tag ok">real Level 1 waypoints</span> 0.9 mm from the outlet axis, 8.9 mm from the coaster centre</td></tr></table>
       <p class="small muted">Referee rule: no arm link or housing may touch a cup or stack; only fingertips may. The nominal runs are the ones in the videos above.</p></div>
@@ -142,7 +175,7 @@ footer{max-width:1120px;margin:80px auto 0;padding:24px 20px 60px;border-top:1px
   <div class="panel" style="margin-top:18px"><h3>What is still open, and why</h3>
     <ul>
       <li><b class="b">Cup more than 15 mm from the coaster centre</b> (the most common failure in Levels 2 and 3, 13 of 48 trials). The coaster is placed up to 8 mm off its nominal spot in randomized trials and the skills are not told where. The dish has about 2 cm of slack around the cup base, which the real replay needs, so it does not centre the cup. A four-sided touch of the dish wall with the held cup was tried and made it worse; it is not in this build.</li>
-      <li><b class="b">Level 4: dispenser pushed more than 2 mm</b> (7 of 24) while the fingertip parks the handle, and the lever lift's first IK step jumps 0.13 rad on some draws (3 of 24). Making the taped dispenser stiffer fixed the creep but broke the lever close timing in Level 1, so it was taken out.</li>
+      <li><b class="b">Level 4: dispenser pushed more than 2 mm</b> (7 of 24) while the previous fingertip sweep parked the handle, and the lever lift's first IK step jumps 0.13 rad on some draws (3 of 24). Those trials were not rerun after the circle-of-closes search. Making the taped dispenser stiffer fixed the creep but broke the lever close timing in Level 1, so it was taken out.</li>
       <li><b class="b">Level 3: no collision-free pin approach</b> for some stack heights (5 of 24).</li>
       <li><b class="b">Level 5:</b> a grid peck that lands inside the cup's open mouth reads as "no cup here", so the scan can miss the cup or fit it in the wrong place and the grasp closes on nothing. That is 8 of 24 failures. The other Level 5 failures are the two arms touching (3), the hand brushing the parked stack (3) and the grasp closing on nothing (3). An offset second pass and model-based pruning were tried and lowered the rate (8 %); they are not in this build.</li>
       <li><b class="w">Grasp failures in every level</b> (1–2 of 24): the jaws stall on a 61–63 mm chord or close on nothing after nine attempts.</li>
@@ -173,19 +206,19 @@ pip install -r requirements.txt                                     # Python 3.1
 ./run_sim.sh                                                        # http://127.0.0.1:8090
 python -m sim_station.selftest                                      # all levels + real-data replay</pre>
 </section>
-
+</main>
 <footer>Dual-YAM digital twin · MIT licence · built with MuJoCo and the i2rt SDK · <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">source</a> · <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin/blob/main/docs/RESULTS.md">full results</a> · <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin/blob/main/docs/RESEARCH.md">research notes</a></footer>
 
-<dialog id="dlg"><video id="dv" controls playsinline></video><div class="cap"><button id="dx">Close</button><h3 id="dt"></h3><div class="muted small" id="dd"></div>
+<dialog id="dlg" aria-labelledby="dt"><video id="dv" controls playsinline></video><div class="cap"><button type="button" id="dx">Close</button><h3 id="dt"></h3><div class="muted small" id="dd"></div>
   <div id="own" class="small" style="display:none;margin-top:10px">Have the song? <label class="btn" style="cursor:pointer;padding:5px 12px">Play my own copy<input id="ownf" type="file" accept="audio/*" hidden></label> <span class="muted">The file stays on your computer: it plays in this page in sync with the video and is never uploaded. This site does not host the songs.</span></div>
   <audio id="oa" preload="auto"></audio></div></dialog>
 
 <script>
 const LEVELS = [
  ["level1","Level 1 · Upright cup in the coaster","Cup out of the coaster, under the spout, lever lifted for 7 s, back into the coaster.","ok","passes every check"],
- ["level2","Level 2 · Nested stack, height known","Stack on the coaster. Pin it with the tap arm, turn the wrist into the flip attitude before grasping, wiggle the top cup free, roll it upright, set it down, serve.","ok","nominal run passes every check, stack untouched"],
- ["level3","Level 3 · Nested stack, height unknown","Peck down on the stack to count the cups, then as Level 2.","ok","nominal run passes every check, stack untouched"],
- ["level4","Level 4 · Lever angle unknown","Feel for the handle, park it, touch it again to confirm, then pour.","ok","nominal run passes every check"],
+ ["level2","Level 2 · Nested stack, height known","Pin the stack, roll the top cup upright in the hand, pass it to the other hand in the air, and carry it under the spout. It is not set down.","ok","nominal run passes every check, stack untouched"],
+ ["level3","Level 3 · Nested stack, height unknown","Peck the stack to count the cups, then the same mid-air handoff as Level 2.","ok","nominal run passes every check, stack untouched"],
+ ["level4","Level 4 · Lever angle unknown","Close on the knob, then close around the circle until the handle fills the jaws, and pour.","ok","nominal run passes every check"],
  ["level5","Level 5 · Cup in the search region","Coarse peck grid over the reachable patch of the mat, not the whole mat, then fit where the cup must stand from every peck.","ok","nominal run passes every check"],
 ];
 const DANCE = [
@@ -195,9 +228,11 @@ const DANCE = [
 ];
 function card(grid, id, title, desc, tag, tagText){
   const el=document.createElement("div"); el.className="card";
-  el.innerHTML=`<div class="vid"><video muted loop playsinline preload="metadata" src="videos/${id}.mp4#t=0.8"></video><div class="play"><span>▶</span></div></div><div class="body"><h3>${title}</h3><div class="small muted">${desc}</div>${tag?`<div style="margin-top:8px"><span class="tag ${tag}">${tagText}</span></div>`:""}</div>`;
-  const v=el.querySelector("video"); el.querySelector(".vid").onmouseenter=()=>v.play().catch(()=>{}); el.querySelector(".vid").onmouseleave=()=>{v.pause();};
-  el.querySelector(".vid").onclick=()=>{const d=document.getElementById("dlg"),dv=document.getElementById("dv");dv.src=`videos/${id}.mp4`;document.getElementById("dt").textContent=title;document.getElementById("dd").textContent=desc;document.getElementById("own").style.display=id.startsWith("dance_")?"block":"none";d.showModal();dv.play().catch(()=>{});};
+  el.innerHTML=`<div class="vid"><video muted loop playsinline preload="metadata" src="videos/${id}.mp4#t=0.8"></video><button type="button" class="play">Play</button></div><div class="body"><h3>${title}</h3><div class="small muted">${desc}</div>${tag?`<div><span class="tag ${tag}">${tagText}</span></div>`:""}</div>`;
+  const v=el.querySelector("video");
+  const reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(!reduce){el.querySelector(".vid").onmouseenter=()=>v.play().catch(()=>{}); el.querySelector(".vid").onmouseleave=()=>{v.pause();};}
+  el.querySelector(".play").onclick=()=>{const d=document.getElementById("dlg"),dv=document.getElementById("dv");dv.src=`videos/${id}.mp4`;document.getElementById("dt").textContent=title;document.getElementById("dd").textContent=desc;document.getElementById("own").style.display=id.startsWith("dance_")?"block":"none";d.showModal();dv.play().catch(()=>{});};
   grid.appendChild(el);
 }
 LEVELS.forEach(l=>card(document.getElementById("levelGrid"),l[0],l[1],l[2],l[3],l[4]));

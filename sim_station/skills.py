@@ -34,6 +34,24 @@ def side_frame(kin, xy, z, off=-9.0, tilt=0.0, depth=0.0) -> np.ndarray:
     return frame_from(a, j, np.array([xy[0], xy[1], z]) + a * depth)
 
 
+# After the flip the fingers are on the base band, so the same cup centre sits this far above the TCP.
+PALM_DROP = 0.048
+
+
+def pour_frame(ctx: Ctx, kin, xy, z, tilt=0.0, depth=0.0) -> np.ndarray:
+    """The spout and coaster frames. A palm-up hold keeps the wrist from the flip and lowers the TCP by the base-band offset."""
+    z = float(z)
+    if ctx.scratch.get("palm_up"):
+        z -= PALM_DROP
+        T = side_frame(kin, xy, z, off=0.0, tilt=tilt, depth=depth)
+        out = np.eye(4)
+        out[:3, :3] = rot_about(T[:3, 2], np.pi) @ T[:3, :3]
+        out[:3, 3] = T[:3, 3]
+        return out
+    z -= float(ctx.scratch.get("spout_drop") or 0.0)
+    return side_frame(kin, xy, z, tilt=tilt, depth=depth)
+
+
 def fmt_mm(x: float) -> str:
     return f"{x * 1000:.1f} mm"
 
@@ -159,6 +177,8 @@ def s_close_cup(ctx: Ctx):
     a, j = fr["a"], fr["j"]
     r_c = cup_radius_at_hold()
     fallback = [(0.014, 0.0), (-0.014, 0.0), (0.0, 0.016), (0.014, 0.016), (-0.014, 0.016), (0.0, -0.012)]
+    if ctx.scratch.get("wide_search"):
+        fallback = fallback + [(0.024, 0.0), (-0.024, 0.0), (0.0, 0.024), (0.024, 0.016), (-0.024, -0.012)]
     lat, deep = 0.0, 0.0
     sign, s_prev, n = 1.0, None, 0
     last = ""
@@ -193,13 +213,16 @@ def s_close_cup(ctx: Ctx):
             T_back = T0.copy()
             T_back[:3, 3] = T0[:3, 3] - a * 0.045
             try:
-                yield from ctx.play("cup", M.cart_move(kin, [T0, T_back], ctx.q("cup"), v_cart=0.06, speed_scale=ctx.speed, min_T=0.7))
+                back = M.cart_move(kin, [T0, T_back], ctx.q("cup"), v_cart=0.06, speed_scale=ctx.speed, min_T=0.7)
+                ctx.check_traj("cup", back, grip_width=L.GRIPPER_MAX_OPEN_M, stride_s=0.01)
+                yield from ctx.play("cup", back)
             except PlanError:
                 pass
         T_g = fr["grasp"].copy()
         T_g[:3, 3] = T_g[:3, 3] + j * lat + a * deep
         try:
             move = M.cart_move(kin, [ctx.tcp("cup"), T_g], ctx.q("cup"), v_cart=0.05, speed_scale=ctx.speed, min_T=0.7)
+            ctx.check_traj("cup", move, grip_width=L.GRIPPER_MAX_OPEN_M, stride_s=0.01)
             yield from ctx.play("cup", move)
             yield from ctx.wait(L.CONTACT_PAUSE_S)
         except PlanError:
@@ -247,18 +270,25 @@ def spout_entry(ctx: Ctx, T0: np.ndarray) -> np.ndarray:
             try:
                 ok = True
                 for z in (0.118, spout_z() + 0.002, spout_z()):
-                    if not kin.ik_multi(side_frame(kin, e, z, tilt=tilt), seeds).ok:
+                    if not kin.ik_multi(pour_frame(ctx, kin, e, z, tilt=tilt), seeds).ok:
                         ok = False
                         last = f"entry ({e[0]:.3f}, {e[1]:.3f}) tilt {tilt:.0f}: unreachable"
                         break
                 if not ok:
                     continue
-                p1 = side_frame(kin, e, 0.118, tilt=tilt)
-                p2 = side_frame(kin, e, spout_z() + 0.002, tilt=tilt)
-                carry = M.cart_move(kin, [T0, p1, p2], q0, v_cart=L.CARRY_SPEED_M_S * 1.3, speed_scale=ctx.speed, min_T=0.8, max_joint_step=0.2)
+                p1 = pour_frame(ctx, kin, e, 0.118, tilt=tilt)
+                p2 = pour_frame(ctx, kin, e, spout_z() + 0.002, tilt=tilt)
+                carry = M.cart_move(kin, [T0, p1, p2], q0, v_cart=L.CARRY_SPEED_M_S * 1.3, speed_scale=ctx.speed, min_T=0.8, max_joint_step=0.25)
                 ctx.check_traj("cup", carry)
-                slide = M.cart_move(kin, [p2, side_frame(kin, np.array([xs, ys]), spout_z(), tilt=tilt)], carry.q[-1], v_cart=0.10,
-                                    speed_scale=ctx.speed, min_T=1.0, max_joint_step=0.2)
+                # The slide that actually runs dips 4 mm first. A corridor whose wrist is already
+                # on the stop can draw the straight line and still be unable to dip.
+                p_under = pour_frame(ctx, kin, np.array([xs, ys]), spout_z(), tilt=tilt)
+                p_dip = p2.copy()
+                p_dip[2, 3] = float(p_under[2, 3]) - 0.004
+                p_mid = p_under.copy()
+                p_mid[2, 3] = float(p_under[2, 3]) - 0.004
+                slide = M.cart_move(kin, [p2, p_dip, p_mid, p_under], carry.q[-1], v_cart=0.08,
+                                    speed_scale=ctx.speed, min_T=1.2, max_joint_step=0.2)
                 ctx.check_traj("cup", slide)
             except PlanError as exc:
                 last = f"entry ({e[0]:.3f}, {e[1]:.3f}) tilt {tilt:.0f}: {exc}"
@@ -276,9 +306,9 @@ def s_carry_to_spout(ctx: Ctx):
     e = spout_entry(ctx, T0)
     tilt = ctx.scratch["spout_tilt"]
     z_carry = 0.118
-    p1 = side_frame(kin, e, z_carry, tilt=tilt)
-    p2 = side_frame(kin, e, spout_z() + 0.002, tilt=tilt)
-    traj = M.cart_move(kin, [T0, p1, p2], ctx.q("cup"), v_cart=L.CARRY_SPEED_M_S * 1.3, speed_scale=ctx.speed, min_T=0.8, max_joint_step=0.2)
+    p1 = pour_frame(ctx, kin, e, z_carry, tilt=tilt)
+    p2 = pour_frame(ctx, kin, e, spout_z() + 0.002, tilt=tilt)
+    traj = M.cart_move(kin, [T0, p1, p2], ctx.q("cup"), v_cart=L.CARRY_SPEED_M_S * 1.3, speed_scale=ctx.speed, min_T=0.8, max_joint_step=0.25)
     ctx.check_traj("cup", traj)
     yield from ctx.play("cup", traj)
     return {"msg": f"cup lowered to spout height in the corridor ({ctx.scratch['spout_side']} side of the dispenser)"}
@@ -289,17 +319,48 @@ def s_slide_under(ctx: Ctx):
     xs, ys = ctx.bel.spout_xy
     T0 = ctx.tcp("cup")
     tilt = ctx.scratch.get("spout_tilt", 0.0)
-    T1 = side_frame(kin, np.array([xs, ys]), spout_z(), tilt=tilt)
     # The carry can leave the cup leaning a few degrees in the fingers. The high side of the rim
     # then meets the spout tip if the slide stays at the final height, so come in low and rise
-    # only once the tip is over the mouth.
-    z_low = spout_z() - 0.004
-    T_dip = T0.copy()
-    T_dip[2, 3] = z_low
-    T_mid = T1.copy()
-    T_mid[2, 3] = z_low
-    traj = M.cart_move(kin, [T0, T_dip, T_mid, T1], ctx.q("cup"), v_cart=0.08, speed_scale=ctx.speed, min_T=1.2, max_joint_step=0.2)
-    ctx.check_traj("cup", traj)
+    # only once the tip is over the mouth. A handoff grasp sometimes sits a millimetre outside
+    # the wrist's reach at that height, so the next tries are a couple of millimetres higher.
+    traj = None
+    last = "no slide"
+    # The first try is the 4 mm dip the nominal pour uses. A handoff that leaves the wrist
+    # on its stop cannot dip, so the later tries come in level, a little higher.
+    for lift, step, dip, creep in ((0.0, 0.2, 0.004, False), (0.003, 0.24, 0.004, False), (0.006, 0.24, 0.004, False),
+                                   (0.0, 0.25, 0.006, True), (0.004, 0.28, 0.004, True)):
+        T1 = pour_frame(ctx, kin, np.array([xs, ys]), spout_z(), tilt=tilt)
+        T1[2, 3] = float(T1[2, 3]) + lift
+        z_low = float(T1[2, 3]) - dip
+        T_dip = T0.copy()
+        T_dip[2, 3] = z_low
+        T_mid = T1.copy()
+        T_mid[2, 3] = z_low
+        if creep:
+            # The wrist is on its stop and cannot dip in place. Move toward the outlet first,
+            # then drop, so the rim still passes under the tip.
+            aim = T1[:2, 3] - T0[:2, 3]
+            n = float(np.linalg.norm(aim))
+            step_xy = aim / n * min(0.03, 0.4 * n) if n > 1e-6 else np.zeros(2)
+            Ta = T0.copy()
+            Ta[0, 3] = float(T0[0, 3] + step_xy[0])
+            Ta[1, 3] = float(T0[1, 3] + step_xy[1])
+            Td = Ta.copy()
+            Td[2, 3] = z_low
+            poses = [T0, Ta, Td, T_mid, T1]
+        else:
+            poses = [T0, T_dip, T_mid, T1]
+        try:
+            traj = M.cart_move(kin, poses, ctx.q("cup"), v_cart=0.08, speed_scale=ctx.speed, min_T=1.2, max_joint_step=step)
+            ctx.check_traj("cup", traj)
+            break
+        except PlanError as exc:
+            last = str(exc)
+            traj = None
+            ctx.event(f"slide try at {lift * 1000:.0f} mm higher, dip {dip * 1000:.0f} mm"
+                      f"{', after a short creep' if creep else ''}: {exc}")
+    if traj is None:
+        raise SkillFault(f"the slide under the spout is not reachable ({last})")
     yield from ctx.play("cup", traj)
     yield from ctx.wait(0.25)
     ctx.scratch["under_spout_tcp"] = ctx.tcp("cup")[:3, 3].copy()
@@ -311,12 +372,13 @@ def s_exit_spout(ctx: Ctx):
     T0 = ctx.tcp("cup")
     e = ctx.scratch["spout_entry"]
     tilt = ctx.scratch.get("spout_tilt", 0.0)
-    z_low = spout_z() - 0.004
+    p1 = pour_frame(ctx, kin, e, spout_z() + 0.002, tilt=tilt)
+    z_low = float(p1[2, 3]) - 0.004
     T_dip = T0.copy()
     T_dip[2, 3] = z_low
-    p_low = side_frame(kin, e, z_low, tilt=tilt)
-    p1 = side_frame(kin, e, spout_z() + 0.002, tilt=tilt)
-    p2 = side_frame(kin, e, 0.118, tilt=tilt)
+    p_low = pour_frame(ctx, kin, e, spout_z() + 0.002, tilt=tilt)
+    p_low[2, 3] = z_low
+    p2 = pour_frame(ctx, kin, e, 0.118, tilt=tilt)
     traj = M.cart_move(kin, [T0, T_dip, p_low, p1, p2], ctx.q("cup"), v_cart=0.08, speed_scale=ctx.speed, min_T=1.2, max_joint_step=0.2)
     ctx.check_traj("cup", traj)
     yield from ctx.play("cup", traj)
@@ -330,21 +392,22 @@ def s_to_coaster(ctx: Ctx, seat_z: float):
     seeds = [ctx.q("cup"), L.REAL_L1_CUP_WAYPOINTS["in_coaster"][:6], np.array([0.0, 1.6, 1.1, 0.7, 0.0, 0.0])]
     chosen = None
     for tilt in (0.0, -8.0, -15.0):
-        top = side_frame(kin, np.array([cx, cy]), seat_z + HOLD_DZ + 0.035, tilt=tilt)
-        low = side_frame(kin, np.array([cx, cy]), seat_z + HOLD_DZ - 0.006, tilt=tilt)
+        top = pour_frame(ctx, kin, np.array([cx, cy]), seat_z + HOLD_DZ + 0.035, tilt=tilt)
+        low = pour_frame(ctx, kin, np.array([cx, cy]), seat_z + HOLD_DZ - 0.006, tilt=tilt)
         if kin.ik_multi(top, seeds).ok and kin.ik_multi(low, seeds).ok:
             chosen = (tilt, top)
             break
     if chosen is None:
         raise SkillFault("the coaster cannot be reached with the cup upright")
     ctx.scratch["coaster_tilt"] = chosen[0]
-    z_over = max(top_over(ctx) + 0.08, 0.28) if ctx.bel.stack_n is not None else 0.22
+    z_mid = max(top_over(ctx) + 0.08, 0.28) if ctx.bel.stack_n is not None else 0.22
+    z_over = z_mid - (PALM_DROP if ctx.scratch.get("palm_up") else 0.0)
     up = T0.copy()
     up[2, 3] = max(float(T0[2, 3]), z_over)
     across = chosen[1].copy()
     across[2, 3] = z_over
     # a waypoint out beside the dispenser, so the carry does not cut across the stack on the coaster spot
-    side = side_frame(kin, np.array([min(cx, L.MOUTH_WORLD_XY[0]) - 0.06, L.MOUTH_WORLD_XY[1]]), z_over, tilt=chosen[0])
+    side = pour_frame(ctx, kin, np.array([min(cx, L.MOUTH_WORLD_XY[0]) - 0.06, L.MOUTH_WORLD_XY[1]]), z_mid, tilt=chosen[0])
     routes = [
         [T0, up, across, chosen[1]],
         [T0, up, side, across, chosen[1]],
@@ -377,7 +440,7 @@ def s_place_cup(ctx: Ctx, seat_z: float):
     kin = ctx.kin["cup"]
     cx, cy = ctx.bel.coaster_xy
     T0 = ctx.tcp("cup")
-    z_goal = seat_z + HOLD_DZ - 0.004
+    z_goal = seat_z + HOLD_DZ - 0.004 - (PALM_DROP if ctx.scratch.get("palm_up") else 0.0)
     T1 = T0.copy()
     T1[2, 3] = z_goal
     plan = ctx.cart_repair("cup", [T0, T1], v_cart=0.018, min_T=1.0)
@@ -395,7 +458,7 @@ def s_place_cup(ctx: Ctx, seat_z: float):
     def guard() -> bool:
         m = ctx.mon["cup"]
         z_now = float(m.tcp[2, 3])
-        if z_now > expected + 0.016:                       # armed only within 16 mm of the believed seat
+        if z_now > expected + 0.016:                   # armed only within 16 mm of the believed seat
             return False
         # contact shows up two ways: a force step, or the hand lagging its command (the arm is a spring, 400 N/m at the TCP)
         lag = z_now - state["z_cmd"]
