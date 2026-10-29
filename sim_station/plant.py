@@ -481,8 +481,7 @@ class Plant:
         self.model.geom_rgba[self.stream_geom, 3] = 0.55 if flowing else 0.0
         self.last_tau = {a: np.array(d.actuator_force[self.arm[a].act]) for a in ARMS}
         self._audit_tick += 1
-        if self._audit_tick % 3 == 0:
-            self._audit_contacts()
+        self._audit_contacts()
         self._hist_tick += 1
         if self._hist_tick % 16 == 0:
             self.history.append(self._history_sample())

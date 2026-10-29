@@ -188,10 +188,11 @@ a{color:var(--acc)}
 const $ = (id) => document.getElementById(id);
 const LEVELS = [
   [1, "Upright cup in the coaster", "known position"], [2, "Nested stack, height known", "pin · wiggle · lay · flip"],
-  [3, "Nested stack, height unknown", "peck to count the cups"], [4, "Lever angle unknown", "feel for the handle"], [5, "Cup anywhere on the mat", "peck grid, then fit"],
+  [3, "Nested stack, height unknown", "peck to count the cups"], [4, "Lever angle unknown", "feel for the handle"], [5, "Cup in the search region", "peck grid, then fit"],
 ];
 let S = null, cfg = {level: 1, material: "paper"}, tab = "run";
 const post = (u, b) => fetch(u, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(b || {})}).then(r => r.json());
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 
 /* ------------------------------------------------------------------ levels / controls */
 LEVELS.forEach(([n, t, s]) => {
@@ -365,12 +366,12 @@ function render() {
   const groups = {}; S.steps.forEach(s => (groups[s.group] = groups[s.group] || []).push(s));
   let html = ""; for (const g of ["Pick", "Pour", "Serve"]) { if (!groups[g]) continue; html += `<div class="group"><div class="gh">${g}<i></i></div>`;
     for (const s of groups[g]) { const txt = s.status === "waiting" ? s.check : (s.msg || s.check);
-      html += `<div class="step ${s.status} ${s.arm || "none"}" data-id="${s.id}"><span class="dot"></span><span class="t">${s.title.replace(/^(Cup|Tap) arm: /, "")}</span><span class="st">${s.status}${s.dur != null ? " · " + fmt(s.dur, 1) + " s" : ""}</span><span class="d">${txt || ""}</span></div>`; }
+      html += `<div class="step ${s.status} ${s.arm || "none"}" data-id="${esc(s.id)}"><span class="dot"></span><span class="t">${esc(s.title.replace(/^(Cup|Tap) arm: /, ""))}</span><span class="st">${esc(s.status)}${s.dur != null ? " · " + fmt(s.dur, 1) + " s" : ""}</span><span class="d">${esc(txt || "")}</span></div>`; }
     html += "</div>"; }
   const tl = $("timeline"); if (tl.dataset.h !== html) { tl.innerHTML = html; tl.dataset.h = html; tl.querySelectorAll(".step").forEach(el => el.onclick = () => { if (!el.classList.contains("waiting")) post("/api/scrub", {id: el.dataset.id}); }); }
   // result
   const rb = $("resultbox"); if (S.result) { const c = S.result.checks || {}; rb.innerHTML = `<h3>${S.result.ok ? '<span class="ok">Passed</span>' : '<span class="bad">Did not pass</span>'}</h3><ul class="res">` + Object.entries(c).map(([k, v]) => `<li class="${v ? "" : "f"}">${k.replace(/_/g, " ")}</li>`).join("") + `</ul><div class="muted mono">cup ${fmt(S.result.coaster_offset_mm, 0)} mm from centre · tilt ${fmt(S.result.tilt_deg, 0)}° · flow ${fmt(S.result.flow_s, 2)} s</div>`; } else rb.innerHTML = "";
-  const ev = $("events"), atBottom = ev.scrollTop + ev.clientHeight >= ev.scrollHeight - 8; ev.innerHTML = S.events.map(([t, m]) => `<div><b class="mono">${fmt(t, 1)}</b> ${m}</div>`).join(""); if (atBottom) ev.scrollTop = ev.scrollHeight;
+  const ev = $("events"), atBottom = ev.scrollTop + ev.clientHeight >= ev.scrollHeight - 8; ev.innerHTML = S.events.map(([t, m]) => `<div><b class="mono">${fmt(t, 1)}</b> ${esc(m)}</div>`).join(""); if (atBottom) ev.scrollTop = ev.scrollHeight;
   if (tab === "tele") drawCharts(); belief(); if (tab === "proof") proofs(); if (tab === "dance") danceStat();
 }
 /* ------------------------------------------------------------------ charts */
@@ -394,7 +395,7 @@ function drawCharts() {
   chart("c4", [{y: T.resid_thr, color: "#ff6b6b", dash: 1}, {y: T.resid, color: "#4cd08a"}], {hi: 2});
 }
 function belief() {
-  const b = S.beliefs; $("belief").innerHTML = `<span>cup (believed)</span><span>${b.cup ? b.cup.join(", ") : "–"}</span><span>cup (true)</span><span>${b.true_cup.join(", ")}</span><span>handle (believed)</span><span>${b.lever_yaw}°</span><span>handle (true)</span><span>${b.true_lever_yaw}°</span>`;
+  const b = S.beliefs; $("belief").innerHTML = `<span>cup (believed)</span><span>${b.cup ? b.cup.map(esc).join(", ") : "–"}</span><span>cup (true)</span><span>${(b.true_cup || []).map(esc).join(", ")}</span><span>handle (believed)</span><span>${b.lever_yaw == null ? "unknown" : esc(b.lever_yaw) + "°"}</span><span>handle (true)</span><span>${esc(b.true_lever_yaw)}°</span>`;
 }
 /* ------------------------------------------------------------------ proofs */
 $("bMC").onclick = () => post("/api/montecarlo", {levels: $("mcLevels").value.split(",").map(x => +x.trim()).filter(Boolean), trials: +$("mcTrials").value});
@@ -403,9 +404,9 @@ function proofs() {
   $("mcProg").textContent = S.mc.running ? S.mc.progress : (S.mc.progress || "");
   const rows = Object.entries(S.mc.results || {}).map(([l, r]) => `<tr><td>${l}</td><td class="${r.meets_target ? "ok" : "bad"}">${r.passed}/${r.trials} (${Math.round(r.success_rate * 100)}%)</td><td>${Math.round(r.target * 100)}%</td><td>${fmt(r.sim_time_mean_s, 0)} s</td><td>${fmt(r.peak_grip_n_max, 0)} N</td><td>${fmt(r.max_tilt_deg_max, 0)}°</td></tr>`).join("");
   $("mcTable").tBodies[0].innerHTML = rows;
-  $("mcReasons").innerHTML = Object.entries(S.mc.results || {}).map(([l, r]) => `<div><b>L${l}</b> ` + r.failure_reasons.map(([m, n]) => `${n}× ${m}`).join(" · ") + "</div>").join("");
+  $("mcReasons").innerHTML = Object.entries(S.mc.results || {}).map(([l, r]) => `<div><b>L${esc(l)}</b> ` + (r.failure_reasons || []).map(([m, n]) => `${esc(n)}× ${esc(m)}`).join(" · ") + "</div>").join("");
   const P = S.proof, o = $("proofOut"); if (P.running) { o.innerHTML = `<span class="muted">running ${P.kind}…</span>`; return; } const r = P.result; if (!r) { o.innerHTML = ""; return; }
-  if (r.error) { o.innerHTML = `<span class="bad">${r.error}</span>`; return; }
+  if (r.error) { o.innerHTML = `<span class="bad">${esc(r.error)}</span>`; return; }
   if (r.kind === "replay_l1" || r.kind === "replay_l1_scene") o.innerHTML = `<div class="${r.ok ? "ok" : "bad"}"><b>${r.ok ? "Replay passes" : "Replay fails"}</b> <span class="muted">(${r.evidence || r.kind})</span></div><div class="kv mono"><span>cup lifted out</span><span>${r.lifted_out_of_coaster}</span><span>under the outlet</span><span>${fmt(r.under_outlet_mm, 1)} mm (≤ 5)</span><span>back in coaster</span><span>${fmt(r.returned_to_coaster_mm, 1)} mm</span><span>max tilt</span><span>${fmt(r.max_tilt_deg, 1)}°</span></div>`;
   else o.innerHTML = `<div class="${r.ok ? "ok" : "bad"}"><b>${r.ok ? "IK reproduces every real pose" : "IK mismatch"}</b></div><table><tr><th>waypoint</th><th>pos mm</th><th>ori °</th></tr>${r.ik_rows.map(x => `<tr><td>${x.waypoint}</td><td>${x.pos_mm}</td><td>${x.ori_deg}</td></tr>`).join("")}</table><div class="muted" style="margin-top:6px">Skill poses vs real: ${r.skill_rows.map(x => `${x.moment}: ${x.pos_mm} mm, ${x.ori_deg}°`).join(" · ")}</div>`;
 }

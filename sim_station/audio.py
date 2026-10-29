@@ -135,7 +135,8 @@ def analyze(y: np.ndarray) -> Analysis:
             continue
         cand = best[js[valid]] + pen[valid]
         k = int(np.argmax(cand))
-        if cand[k] > 0 or True:
+        # take the best predecessor even when its score is negative; `or True` used to make the old gate dead
+        if np.isfinite(cand[k]):
             best[i] = onset[i] + cand[k]
             prev[i] = js[valid][k]
     # start from the best score in the last two beats

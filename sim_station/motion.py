@@ -105,7 +105,16 @@ def _slerp_R(R0: np.ndarray, R1: np.ndarray, u: float) -> np.ndarray:
     ang = float(np.arccos(np.clip(c, -1.0, 1.0)))
     if ang < 1e-9:
         return R0.copy()
-    axis = np.array([Rrel[2, 1] - Rrel[1, 2], Rrel[0, 2] - Rrel[2, 0], Rrel[1, 0] - Rrel[0, 1]]) / (2.0 * np.sin(ang))
+    axis = np.array([Rrel[2, 1] - Rrel[1, 2], Rrel[0, 2] - Rrel[2, 0], Rrel[1, 0] - Rrel[0, 1]])
+    s = 2.0 * np.sin(ang)
+    if abs(s) < 1e-6:
+        # angle is ~180 deg, so the skew vector vanishes. Any axis of Rrel + I is a valid 180-degree axis.
+        axis = np.array([Rrel[0, 0] + 1.0, Rrel[1, 0], Rrel[2, 0]])
+        if float(np.linalg.norm(axis)) < 1e-6:
+            axis = np.array([Rrel[0, 1], Rrel[1, 1] + 1.0, Rrel[2, 1]])
+        axis = axis / max(float(np.linalg.norm(axis)), 1e-12)
+    else:
+        axis = axis / s
     K = np.array([[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
     Ru = np.eye(3) + np.sin(ang * u) * K + (1 - np.cos(ang * u)) * K @ K
     return R0 @ Ru

@@ -40,21 +40,46 @@ def _run_trial(args) -> dict:
     return r
 
 
+def wilson_interval(passed: int, trials: int, z: float = 1.96) -> tuple:
+    """95% Wilson interval for a binomial rate. Returns (low, high) in [0, 1]."""
+    n = int(trials)
+    if n <= 0:
+        return (float("nan"), float("nan"))
+    phat = float(passed) / n
+    z2 = z * z
+    denom = 1.0 + z2 / n
+    centre = (phat + z2 / (2.0 * n)) / denom
+    margin = z * float(np.sqrt((phat * (1.0 - phat) + z2 / (4.0 * n)) / n)) / denom
+    return (float(max(0.0, centre - margin)), float(min(1.0, centre + margin)))
+
+
 def summarize(results: List[dict]) -> dict:
     ok = [r for r in results if r["ok"]]
-    reasons = Counter()
+    first = Counter()
+    every = Counter()
     for r in results:
         if not r["ok"]:
-            reasons[(r["reasons"][0] if r["reasons"] else "unknown")[:90]] += 1
-    f = lambda key, fn=np.mean: float(fn([r[key] for r in ok])) if ok else float("nan")
+            reasons = r.get("reasons") or ["unknown"]
+            first[str(reasons[0])[:90]] += 1
+            for reason in reasons:
+                every[str(reason)[:90]] += 1
+    def col(rows, key, fn=np.mean):
+        vals = [r[key] for r in rows if r.get(key) is not None]
+        return float(fn(vals)) if vals else float("nan")
+    lo, hi = wilson_interval(len(ok), len(results))
     return dict(
         trials=len(results), passed=len(ok), success_rate=len(ok) / max(len(results), 1),
-        sim_time_mean_s=f("sim_time_s"), sim_time_p95_s=f("sim_time_s", lambda x: np.percentile(x, 95)),
+        wilson95=[lo, hi],
+        sim_time_mean_s=col(ok, "sim_time_s"),
+        sim_time_mean_s_note="mean over passing trials only",
+        sim_time_all_mean_s=col(results, "sim_time_s"),
+        sim_time_p95_s=col(ok, "sim_time_s", lambda x: np.percentile(x, 95)),
         peak_grip_n_max=float(max((r.get("peak_grip_n", 0.0) for r in results), default=0.0)),
         max_tilt_deg_max=float(max((r.get("max_tilt_deg", 0.0) for r in results), default=0.0)),
-        coaster_offset_mm_mean=f("coaster_offset_mm"),
+        coaster_offset_mm_mean=col(ok, "coaster_offset_mm"),
         fit_err_mm=[round(r["fit_err_mm"], 1) for r in results if r.get("fit_err_mm") is not None],
-        failure_reasons=reasons.most_common(8),
+        failure_reasons=first.most_common(8),
+        failure_reasons_all=every.most_common(12),
     )
 
 
@@ -93,8 +118,11 @@ def main(argv: Optional[List[str]] = None) -> None:
         t0 = time.time()
         out = run_level(lv, a.trials, a.jobs, seed0=a.seed0, progress=prog)
         allres[lv] = out
-        print(f"Level {lv}: {out['passed']}/{out['trials']} = {100 * out['success_rate']:.0f}% (target {100 * out['target']:.0f}%) "
-              f"mean {out['sim_time_mean_s']:.0f}s sim, peak grip {out['peak_grip_n_max']:.0f} N, max tilt {out['max_tilt_deg_max']:.0f} deg, wall {time.time() - t0:.0f}s")
+        lo, hi = out["wilson95"]
+        print(f"Level {lv}: {out['passed']}/{out['trials']} = {100 * out['success_rate']:.0f}% "
+              f"(95% Wilson {100 * lo:.0f}–{100 * hi:.0f}%, target {100 * out['target']:.0f}%) "
+              f"pass-only mean {out['sim_time_mean_s']:.0f}s sim, all-trial mean {out['sim_time_all_mean_s']:.0f}s, "
+              f"peak grip {out['peak_grip_n_max']:.0f} N, max tilt {out['max_tilt_deg_max']:.0f} deg, wall {time.time() - t0:.0f}s")
         for reason, n in out["failure_reasons"]:
             print(f"    {n:3d} x {reason}")
     if a.json:

@@ -918,10 +918,7 @@ def plan_flip(ctx: Ctx) -> dict:
     kin = ctx.kin["cup"]
     q_now = ctx.q("cup")
     T_now = ctx.tcp("cup")
-    stack_xy = ctx.bel.stack_xy
     for xy, z, ao, tilt in FLIP_CANDIDATES:
-        if stack_xy is not None and np.linalg.norm(np.asarray(xy) - np.asarray(stack_xy)) < 0.0:
-            continue
         T1, a, sgn = _flip_frame(kin, xy, z, ao, tilt)
         seeds = [np.array([0.0, 1.2, 1.1, 0.5, 0.0, -1.6 * sgn]), np.array([0.3, 1.0, 1.0, 0.8, 0.6, -1.6 * sgn]),
                  np.array([0.0, 1.6, 1.1, 0.7, 0.0, -1.5 * sgn]), np.array([0.2, 1.0, 0.5, 0.0, 0.0, -1.5 * sgn])]

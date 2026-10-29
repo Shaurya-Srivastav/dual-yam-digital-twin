@@ -263,6 +263,15 @@ def _predict_hit(p: np.ndarray, c: np.ndarray, radius: float) -> bool:
     return float(np.linalg.norm(np.asarray(p) - np.asarray(c))) < radius
 
 
+RIM_INNER = 0.028
+
+
+def _on_rim(p: np.ndarray, c: np.ndarray, outer: float) -> bool:
+    """True when a vertical peck at p would meet the rim of a cup at c, not fall through the open mouth."""
+    d = float(np.linalg.norm(np.asarray(p) - np.asarray(c)))
+    return RIM_INNER < d < outer
+
+
 def s_fit_cup(ctx: Ctx, near: np.ndarray, max_pecks: int = 8):
     """Fine search. The next peck is the one that splits the set of centres still consistent with the touches so far
     (the information-gain rule in the tactile-localisation papers), and it stops once that set is under 5 mm."""
@@ -305,7 +314,9 @@ def s_fit_cup(ctx: Ctx, near: np.ndarray, max_pecks: int = 8):
         if r["occupied"]:
             cand = [c for c in cand if _predict_hit(best, c, 0.064)]
         else:
-            cand = [c for c in cand if not _predict_hit(best, c, 0.038)]
+            # a miss at the 8 cm stop also happens when the blade drops into the open mouth, so that miss
+            # must not delete cup centres the peck fell inside
+            cand = [c for c in cand if not _on_rim(best, c, 0.040)]
         if not cand:
             cand = [np.asarray(best, float)]
             break
@@ -321,7 +332,7 @@ def s_fit_cup(ctx: Ctx, near: np.ndarray, max_pecks: int = 8):
 def search_grid(ctx: Ctx) -> List[np.ndarray]:
     """Coarse grid over the free mat on the cup arm's side, skipping the places the calibration says are occupied."""
     pts: List[np.ndarray] = []
-    xs = np.arange(L.L5_REGION_X[0] + 0.01, L.L5_REGION_X[1] + 1e-6, 0.060)       # a 7.6 cm rim always holds a grid point; the tilted hand also notices a cup ~7 cm away
+    xs = np.arange(L.L5_REGION_X[0] + 0.01, L.L5_REGION_X[1] + 1e-6, 0.060)       # 6 cm can miss a 76 mm rim; a miss is followed by two offsets in s_scan_mat
     ys = np.arange(L.L5_REGION_Y[1] - 0.01, L.L5_REGION_Y[0] - 1e-6, -0.060)
     for i, x in enumerate(xs):
         col = ys if i % 2 == 0 else ys[::-1]
@@ -336,20 +347,43 @@ def search_grid(ctx: Ctx) -> List[np.ndarray]:
     return pts
 
 
+def _scan_ok(p: np.ndarray) -> bool:
+    x0, x1 = min(L.L5_REGION_X), max(L.L5_REGION_X)
+    y0, y1 = min(L.L5_REGION_Y), max(L.L5_REGION_Y)
+    if not (x0 <= float(p[0]) <= x1 and y0 <= float(p[1]) <= y1):
+        return False
+    return not any(np.linalg.norm(p - c) < r for c, r in L.L5_KEEPOUT)
+
+
 def s_scan_mat(ctx: Ctx):
-    """Level 5: peck a coarse grid until something stands up from the mat, then hand over to the fine search."""
+    """Level 5: peck a coarse grid until something stands up from the mat, then hand over to the fine search.
+
+    The search region is L5_REGION, not the whole mat. A 6 cm cell can put its only sample in the open mouth,
+    which stops at 8 cm with no contact. Each such miss is followed by two pecks 32 mm away, on the rim if the
+    first peck was near the cup's centre."""
     pts = search_grid(ctx)
     done = 0
-    for p in pts:
+
+    def one(p: np.ndarray):
+        nonlocal done
         r = yield from s_peck(ctx, p, z_stop=0.08)
         done += 1
-        if not r["reachable"]:
-            continue
-        if r["occupied"]:
-            ctx.bel.found["coarse_hit"] = p.copy()
+        if r["reachable"] and r["occupied"]:
+            ctx.bel.found["coarse_hit"] = np.asarray(p, float).copy()
             ctx.event(f"coarse hit at ({p[0]:.3f}, {p[1]:.3f}): blade stopped at {r['z'] * 100:.1f} cm after {done} pecks")
+            return True
+        return False
+
+    for p in pts:
+        if (yield from one(p)):
             return {"msg": f"something stands at ({p[0]:.3f}, {p[1]:.3f}) after {done} pecks"}
-    raise SkillFault(f"scanned {done} grid points and found nothing standing on the mat: the cup is out of reach")
+        for d in ((0.032, 0.0), (0.0, 0.032)):
+            q = np.asarray(p, float) + np.array(d)
+            if not _scan_ok(q):
+                continue
+            if (yield from one(q)):
+                return {"msg": f"something stands at ({q[0]:.3f}, {q[1]:.3f}) after {done} pecks"}
+    raise SkillFault(f"scanned {done} grid points and found nothing standing on the mat: the cup is outside the searched region or the pecks missed its rim")
 
 
 # ---------------------------------------------------------------------------

@@ -416,12 +416,13 @@ def s_place_cup(ctx: Ctx, seat_z: float):
         else:
             ctx.hold("cup")
         yield
-    # The carry can finish a centimetre off the coaster axis. Walk the hand back onto it
-    # before the jaws open. The cup centre is the TCP for this side grasp.
+    # The carry can finish a centimetre off the coaster axis. Walk toward the believed centre only when the
+    # dish is not pushing the other way. On a randomized trial the coaster is up to 8 mm off that belief, and
+    # walking back onto the belief undoes the centring the dish just did.
     T_now = ctx.tcp("cup").copy()
     err = np.array([cx - float(T_now[0, 3]), cy - float(T_now[1, 3]), 0.0])
     nxy = float(np.linalg.norm(err[:2]))
-    if nxy > 0.003:
+    if belief_walk_ok(shift[:2], err[:2]):
         err[:2] *= min(1.0, 0.018 / nxy)
         T_fix = T_now.copy()
         T_fix[:3, 3] = T_now[:3, 3] + err
@@ -438,6 +439,14 @@ def s_place_cup(ctx: Ctx, seat_z: float):
     if not done:
         return {"msg": f"cup base touched down at TCP z {z_end * 1000:.1f} mm (expected {expected * 1000:.1f} mm)"}
     return {"msg": f"cup lowered to the seat without a contact spike, TCP z {z_end * 1000:.1f} mm"}
+
+
+def belief_walk_ok(shift_xy, err_xy) -> bool:
+    """True when a correction toward the believed coaster is not fighting the dish push."""
+    err = np.asarray(err_xy, dtype=float)
+    if float(np.linalg.norm(err)) <= 0.003:
+        return False
+    return float(np.dot(np.asarray(shift_xy, dtype=float), err)) >= -1e-9
 
 
 def s_release(ctx: Ctx):
