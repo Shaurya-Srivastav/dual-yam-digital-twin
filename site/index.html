@@ -37,7 +37,7 @@
 [data-theme=light] .btn,[data-theme=light] .tab,[data-theme=light] .iconbtn,[data-theme=light] .seg,[data-theme=light] .player,[data-theme=light] .side,
 [data-theme=light] .chart,[data-theme=light] .row,[data-theme=light] .row>button,[data-theme=light] .frame,[data-theme=light] .metric,[data-theme=light] .badge,
 [data-theme=light] .node i,[data-theme=light] .pipedetail,[data-theme=light] details.acc,[data-theme=light] .card,[data-theme=light] .paper,[data-theme=light] .kpi,
-[data-theme=light] .issue,[data-theme=light] .code,[data-theme=light] dialog,[data-theme=light] .chapters li button,[data-theme=light] .paper .here,[data-theme=light] .gaps{border-radius:4px}
+[data-theme=light] .issue,[data-theme=light] .code,[data-theme=light] dialog,[data-theme=light] .chapters li button,[data-theme=light] .paper .here,[data-theme=light] .gaps,[data-theme=light] .armboard,[data-theme=light] .armcard,[data-theme=light] .astrip canvas{border-radius:4px}
 [data-theme=light] .btn{border-color:var(--text);background:transparent}
 [data-theme=light] .btn.p{background:var(--text);border-color:var(--text);color:var(--bg)}
 [data-theme=light] .btn:hover{background:var(--accent);border-color:var(--accent);color:#fff;transform:none}
@@ -139,6 +139,23 @@ h3{font-size:19px;line-height:1.3;margin:0 0 6px;font-weight:650;letter-spacing:
 .gaps .chev{flex:none;width:22px;height:22px;color:var(--muted);transition:transform .25s}
 .gaps[open] .chev{transform:rotate(180deg)}
 .gaps .issues{margin:0;padding:0 18px 18px}
+.armboard{margin-top:18px;border:1px solid var(--line);border-radius:18px;background:var(--surface);padding:16px 18px 10px}
+.armgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}
+.armcard{border:1px solid var(--line);border-radius:14px;padding:14px 14px 6px;border-top:3px solid var(--accent);background:var(--surface)}
+.armcard.tap{border-top-color:var(--accent2)}
+.ahead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.ahead .ahand{margin-left:auto;font:500 12.5px var(--mono);color:var(--muted)}
+.jvals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px 8px;margin:10px 0 4px}
+.jvals span{font:500 12px var(--mono);color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.jvals i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.jvals b{color:var(--text);font-weight:600}
+.astrip{display:grid;grid-template-columns:148px minmax(0,1fr);gap:10px;align-items:center;padding:6px 0;border-top:1px dashed var(--line)}
+.astrip .lab b{display:block;font-size:13px;font-weight:600;color:var(--soft)}
+.astrip .lab span{font-size:11.5px;color:var(--muted)}
+.astrip canvas{display:block;width:100%;height:72px;cursor:crosshair;border-radius:8px}
+.astrip.slim canvas{height:46px}
+.jkey{display:flex;gap:12px;flex-wrap:wrap;font:500 12px var(--mono);color:var(--muted)}
+.jkey i{width:10px;height:3px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:3px}
 .side header{padding:18px 18px 12px;border-bottom:1px solid var(--line)}
 .side header p{margin:6px 0 0;font-size:14px;color:var(--soft)}
 .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
@@ -269,7 +286,8 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
   .pipe{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:22px}.pipe::before{display:none}
   .row>button{grid-template-columns:150px minmax(0,1fr) 56px 20px;gap:10px}
   .fails{padding-left:14px}
-  .kpis,.issues,.grid2{grid-template-columns:1fr}
+  .kpis,.issues,.grid2,.armgrid{grid-template-columns:1fr}
+  .astrip{grid-template-columns:1fr}
 }
 @media (max-width:620px){
   .grid3{grid-template-columns:1fr}.links{display:none}
@@ -338,6 +356,28 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
       <header><h3 id="lt"></h3><p id="ld"></p><div class="metrics" id="lm"></div></header>
       <ol class="chapters" id="ch" aria-label="Steps"></ol>
     </aside>
+  </div>
+  <div class="armboard rv" id="arms">
+    <div class="shead"><span class="eyebrow">Both arms</span><span class="small muted">Joint position, speed and torque from each arm's own sensors, recorded on this run and in step with the video. Click a trace to jump there.</span>
+      <span class="jkey" id="jkey"></span></div>
+    <div class="armgrid">
+      <article class="armcard" data-arm="cup">
+        <div class="ahead"><span class="arm cup">cup arm</span><span class="ahand"></span></div>
+        <div class="jvals"></div>
+        <div class="astrip" data-k="q"><div class="lab"><b>Joint position</b><span>degrees, J1 to J6</span></div><canvas aria-label="Cup arm joint positions"></canvas></div>
+        <div class="astrip" data-k="qd"><div class="lab"><b>Joint speed</b><span>degrees per second</span></div><canvas aria-label="Cup arm joint speeds"></canvas></div>
+        <div class="astrip" data-k="tau"><div class="lab"><b>Joint torque</b><span>newton-metres</span></div><canvas aria-label="Cup arm joint torques"></canvas></div>
+        <div class="astrip slim" data-k="speed"><div class="lab"><b>Hand speed</b><span></span></div><canvas aria-label="Cup arm hand speed"></canvas></div>
+      </article>
+      <article class="armcard tap" data-arm="tap">
+        <div class="ahead"><span class="arm tap">tap arm</span><span class="ahand"></span></div>
+        <div class="jvals"></div>
+        <div class="astrip" data-k="q"><div class="lab"><b>Joint position</b><span>degrees, J1 to J6</span></div><canvas aria-label="Tap arm joint positions"></canvas></div>
+        <div class="astrip" data-k="qd"><div class="lab"><b>Joint speed</b><span>degrees per second</span></div><canvas aria-label="Tap arm joint speeds"></canvas></div>
+        <div class="astrip" data-k="tau"><div class="lab"><b>Joint torque</b><span>newton-metres</span></div><canvas aria-label="Tap arm joint torques"></canvas></div>
+        <div class="astrip slim" data-k="speed"><div class="lab"><b>Hand speed</b><span></span></div><canvas aria-label="Tap arm hand speed"></canvas></div>
+      </article>
+    </div>
   </div>
 </div></section>
 
@@ -464,9 +504,7 @@ python -m sim_station.evaluate --trials 24                        <span class="c
 
 <dialog id="dlg" aria-labelledby="dt"><video id="dv" controls playsinline></video>
   <div class="cap"><div class="grow"><h3 id="dt"></h3><p id="dd"></p></div>
-    <label class="btn" style="padding:9px 14px">Play along with your copy<input id="ownf" type="file" accept="audio/*" hidden></label>
-    <button class="btn" type="button" id="dx" style="padding:9px 14px">Close</button></div>
-  <audio id="oa" preload="auto"></audio></dialog>
+    <button class="btn" type="button" id="dx" style="padding:9px 14px">Close</button></div></dialog>
 
 <script>
 const LEVELS=[
@@ -560,8 +598,8 @@ $("#speed").onclick=e=>{const b=e.target.closest("button");if(!b)return;$("#spee
 $("#fs").onclick=()=>{(pv.requestFullscreen||pv.webkitEnterFullscreen||(()=>{})).call(pv);};
 const STRIPS={
  w:{keys:[["cup_w","--accent"],["tap_w","--accent2"]],lo:0,hi:80,fmt:v=>`cup ${v[0].toFixed(0)} · tap ${v[1].toFixed(0)} mm`},
- f:{keys:[["cup_f","--accent"],["tap_f","--accent2"]],lo:0,hi:20,fmt:v=>`cup ${v[0].toFixed(1)} · tap ${v[1].toFixed(1)} N`},
- c:{keys:[["contact","--bad"]],lo:0,hi:8,fmt:v=>`${v[0].toFixed(1)} N`},
+ f:{keys:[["cup_f","--accent"],["tap_f","--accent2"],["cup_cap","--accent",1],["tap_cap","--accent2",1]],lo:0,hi:20,fmt:v=>`cup ${v[0].toFixed(1)}${TEL.cup_cap?" / "+v[2].toFixed(0):""} · tap ${v[1].toFixed(1)}${TEL.tap_cap?" / "+v[3].toFixed(0):""} N`},
+ c:{keys:[["contact","--bad"],["contact_thr","--muted",1]],lo:0,hi:8,fmt:v=>`${v[0].toFixed(1)} N`},
  l:{keys:[["lever","--text"]],lo:-5,hi:65,flow:true,fmt:(v,fl)=>`${v[0].toFixed(0)}°${fl?" · valve open":""}`},
 };
 const css=k=>getComputedStyle(root).getPropertyValue(k).trim();
@@ -577,17 +615,46 @@ function drawSensors(){
     const X=t=>w*t/dur, Y=v=>h-3-(h-6)*(Math.min(Math.max(v,S.lo),S.hi)-S.lo)/(S.hi-S.lo);
     if(S.flow){g.fillStyle=css("--ok");g.globalAlpha=.22;let a=-1;
       for(let k=0;k<=n;k++){const on=k<n&&TEL.flow[k];if(on&&a<0)a=k;if(!on&&a>=0){g.fillRect(X(TEL.t[a]),0,X(TEL.t[k-1])-X(TEL.t[a])+1,h);a=-1;}}g.globalAlpha=1;}
-    S.keys.forEach(([k,c])=>{const v=TEL[k];g.strokeStyle=css(c);g.lineWidth=1.5;g.lineJoin="round";g.beginPath();
-      for(let j=0;j<n;j++){const x=X(TEL.t[j]),y=Y(v[j]);j?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();});
+    S.keys.forEach(([k,c,dash])=>{const v=TEL[k];if(!v||(dash&&!v.some(x=>x)))return;g.strokeStyle=css(c);g.lineWidth=dash?1:1.5;g.setLineDash(dash?[4,3]:[]);g.lineJoin="round";g.beginPath();
+      for(let j=0;j<n;j++){const x=X(TEL.t[j]),y=Y(v[j]);j?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();});g.setLineDash([]);
     const px=X(now);g.fillStyle=css("--text");g.globalAlpha=.85;g.fillRect(px-0.75,0,1.5,h);g.globalAlpha=1;
-    st.querySelector(".lab span").textContent=S.fmt(S.keys.map(([k])=>TEL[k][i]),TEL.flow[i]);
+    const vals=S.keys.map(([k])=>TEL[k]?TEL[k][i]:0);
+    st.querySelector(".lab span").textContent=S.fmt(vals,TEL.flow[i]);
   });
+  drawArms();
 }
 let raf=0;const loop=()=>{drawSensors();raf=pv.paused?0:requestAnimationFrame(loop);};
 pv.addEventListener("play",()=>{if(!raf)raf=requestAnimationFrame(loop);});
 ["seeked","loadedmetadata","pause"].forEach(ev=>pv.addEventListener(ev,drawSensors));
-document.querySelectorAll("#sensors canvas").forEach(cv=>cv.addEventListener("click",e=>{const r=cv.getBoundingClientRect();if(pv.duration)seekTo(pv.duration*(e.clientX-r.left)/r.width);}));
+const JOINTS=["J1","J2","J3","J4","J5","J6"];
+const JC={light:["#8d3b22","#9a6a12","#1c6b43","#215d78","#5c4588","#922e2e"],dark:["#e7b2a4","#f2c45a","#7ddeb0","#9fd4ee","#d2c2f0","#ffb0b0"]};
+$("#jkey").innerHTML=JOINTS.map((j,i)=>`<span><i data-j="${i}"></i>${j}</span>`).join("");
+function paintKey(){const pal=JC[root.dataset.theme==="dark"?"dark":"light"];$("#jkey").querySelectorAll("i").forEach(el=>el.style.background=pal[+el.dataset.j]);
+  document.querySelectorAll(".jvals").forEach(box=>{const arm=box.parentElement.dataset.arm;if(box.childElementCount)return;
+    box.innerHTML=JOINTS.map((j,i)=>`<span><i data-j="${i}"></i>${j} <b data-j="${i}" data-arm="${arm}">–</b></span>`).join("");});}
+function drawTrace(g,w,h,ys,color,dash,lo,hi,dur){const X=t=>w*t/dur,Y=v=>h-4-(h-8)*(Math.min(Math.max(v,lo),hi)-lo)/(hi-lo);
+  g.strokeStyle=color;g.lineWidth=dash?1:1.5;g.setLineDash(dash?[4,3]:[]);g.lineJoin="round";g.beginPath();
+  for(let j=0;j<ys.length;j++){const x=X(TEL.t[j]),y=Y(ys[j]);j?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();g.setLineDash([]);}
+function spanOf(groups,pinZero){let lo=Infinity,hi=-Infinity;groups.forEach(g=>g.forEach(v=>{if(v<lo)lo=v;if(v>hi)hi=v;}));
+  if(pinZero){lo=Math.min(lo,0);hi=Math.max(hi,0);}if(!isFinite(lo))return[0,1];if(hi-lo<1e-6){lo-=1;hi+=1;}const p=(hi-lo)*.1;return[lo-p,hi+p];}
+function drawArms(){if(!TEL||!TEL.cup_q){$("#arms").hidden=true;return;}$("#arms").hidden=false;paintKey();
+  const n=TEL.t.length,dur=pv.duration||TEL.t[n-1]+2,now=pv.currentTime||0,i=Math.max(0,Math.min(n-1,Math.round(now*10))),dpr=devicePixelRatio||1;
+  const pal=JC[root.dataset.theme==="dark"?"dark":"light"];
+  document.querySelectorAll(".armcard").forEach(card=>{const arm=card.dataset.arm;
+    card.querySelectorAll("b[data-j]").forEach(b=>{b.textContent=TEL[arm+"_q"][+b.dataset.j][i].toFixed(1)+"°";b.previousElementSibling.style.background=pal[+b.dataset.j];});
+    const cap=TEL[arm+"_cap"];card.querySelector(".ahand").textContent=`${TEL[arm+"_w"][i].toFixed(0)} mm · ${TEL[arm+"_f"][i].toFixed(1)}${cap?" / "+cap[i].toFixed(0):""} N · ${TEL[arm+"_speed"][i].toFixed(0)} mm/s`;
+    card.querySelectorAll(".astrip").forEach(st=>{const cv=st.querySelector("canvas"),w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return;
+      if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
+      const g=cv.getContext("2d");g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);g.fillStyle=css("--surface2");g.fillRect(0,0,w,h);
+      const kind=st.dataset.k,series=kind==="speed"?[TEL[arm+"_speed"]]:TEL[arm+"_"+kind];
+      const [lo,hi]=spanOf(series,kind!=="q"),X=t=>w*t/dur,Y=v=>h-4-(h-8)*(v-lo)/(hi-lo);
+      if(lo<0&&hi>0){g.strokeStyle=css("--line2");g.beginPath();g.moveTo(0,Y(0));g.lineTo(w,Y(0));g.stroke();}
+      series.forEach((ys,j)=>drawTrace(g,w,h,ys,kind==="speed"?css("--text"):pal[j],0,lo,hi,dur));
+      g.fillStyle=css("--text");g.globalAlpha=.85;g.fillRect(X(now)-0.75,0,1.5,h);g.globalAlpha=1;
+      if(kind==="speed")st.querySelector(".lab span").textContent=TEL[arm+"_speed"][i].toFixed(0)+" mm/s";});});}
+document.querySelectorAll("#sensors canvas, #arms canvas").forEach(cv=>cv.addEventListener("click",e=>{const r=cv.getBoundingClientRect();if(pv.duration)seekTo(pv.duration*(e.clientX-r.left)/r.width);}));
 new ResizeObserver(()=>drawSensors()).observe($("#sensors"));
+new ResizeObserver(()=>drawSensors()).observe($("#arms"));
 select(2,false);
 
 /* pipeline */
@@ -624,17 +691,10 @@ const dg=$("#danceGrid");
 DANCE.forEach(d=>{const c=document.createElement("div");c.className="card rv";
   c.innerHTML=`<button class="thumb" type="button" aria-label="Play ${d[1]}"><img src="videos/${d[0]}.jpg" alt=""><span class="pl"><span></span></span></button><div class="body"><h3>${d[1]}</h3><p>${d[2]}</p></div>`;
   c.querySelector(".thumb").onclick=()=>openClip(d);dg.appendChild(c);io.observe(c);});
-const dlg=$("#dlg"),dv=$("#dv"),oa=$("#oa"),SONG_START=30,RISE=4;
+const dlg=$("#dlg"),dv=$("#dv");
 function openClip(d){dv.src=`videos/${d[0]}.mp4`;$("#dt").textContent=d[1];$("#dd").textContent=d[2];dlg.showModal();dv.play().catch(()=>{});}
 $("#dx").onclick=()=>dlg.close();dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close();});
-dlg.addEventListener("close",()=>{dv.pause();dv.removeAttribute("src");oa.pause();});
-const songT=()=>SONG_START+Math.max(dv.currentTime-RISE,0);
-function syncOwn(){if(!oa.src)return;const inRise=dv.currentTime<RISE;
-  if(dv.paused||inRise){oa.pause();if(inRise)oa.currentTime=SONG_START;return;}
-  if(Math.abs(oa.currentTime-songT())>0.08)oa.currentTime=songT();if(oa.paused)oa.play().catch(()=>{});}
-$("#ownf").onchange=e=>{const f=e.target.files[0];if(!f)return;if(oa.src)URL.revokeObjectURL(oa.src);oa.src=URL.createObjectURL(f);dv.muted=true;dv.currentTime=0;dv.play().catch(()=>{});};
-["play","pause","seeked","timeupdate","ratechange"].forEach(ev=>dv.addEventListener(ev,()=>{oa.playbackRate=dv.playbackRate;syncOwn();}));
-dv.addEventListener("loadstart",()=>{oa.pause();oa.removeAttribute("src");$("#ownf").value="";});
+dlg.addEventListener("close",()=>{dv.pause();dv.removeAttribute("src");});
 
 /* copy */
 $("#copy").onclick=async()=>{const t=$("#cmd").innerText.split("\n").map(l=>l.replace(/\s+#.*$/,"")).join("\n");

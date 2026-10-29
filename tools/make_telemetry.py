@@ -22,7 +22,9 @@ def record(lv: int) -> dict:
     S = Session()
     S.reset(lv, "paper", seed=0)
     P, ctx = S.plant, S.ctx
-    tel = {k: [] for k in ("t", "cup_w", "tap_w", "cup_f", "tap_f", "contact", "lever", "flow")}
+    scalar = ("t", "cup_w", "tap_w", "cup_f", "tap_f", "cup_cap", "tap_cap", "cup_speed", "tap_speed", "contact", "contact_thr", "lever", "flow")
+    tel = {k: [] for k in scalar}
+    joints = {f"{a}_{k}": [] for a in ARMS for k in ("q", "qd", "tau")}
     nxt, last_flow = 0.0, P.flow_time
     while not S.ex.finished and not S.ex.fault and P.time - S.t_zero < 400:
         S.tick()
@@ -39,12 +41,22 @@ def record(lv: int) -> dict:
             contact = float(np.linalg.norm(mon[0])) if mon else 0.0
         tel["t"].append(round(t, 2))
         for a in ARMS:
+            obs = P.read_arm(a)
             tel[f"{a}_w"].append(round(row[f"{a}_width_mm"], 1))
             tel[f"{a}_f"].append(round(row[f"{a}_grip_f"], 2))
+            tel[f"{a}_cap"].append(round(float(P.ctl[a]["grip_cap"]), 2))
+            tel[f"{a}_speed"].append(round(float(row[f"{a}_speed"]) * 1000.0, 1))
+            joints[f"{a}_q"].append([round(float(np.degrees(x)), 2) for x in obs.q])
+            joints[f"{a}_qd"].append([round(float(np.degrees(x)), 2) for x in obs.qd])
+            joints[f"{a}_tau"].append([round(float(x), 3) for x in obs.tau])
         tel["contact"].append(round(contact, 2))
+        tel["contact_thr"].append(round(float(gs.get("threshold") or 0.0), 2))
         tel["lever"].append(round(float(np.degrees(row["lever"])), 1))
         tel["flow"].append(int(P.flow_time > last_flow))
         last_flow = P.flow_time
+    n = len(tel["t"])
+    for key, rows in joints.items():
+        tel[key] = [[rows[s][j] for s in range(n)] for j in range(6)]
     res = S.check_pass()
     print(f"level {lv}: pass={res['ok']} sim {res['sim_time_s']:.1f} s, {len(tel['t'])} samples")
     return tel, res
