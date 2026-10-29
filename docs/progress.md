@@ -54,20 +54,20 @@ These commands were run on this working tree. Exit code 0 unless noted.
 
 A global step now waits until both arm lanes are free, and an arm step does not start while a global step is running. The nominal pour step already waited on the previous arm steps, and the selftest still passes. The solver line in the MJCF is `sim_station/physics_manifest.py`. The force sign is the same formula as before, called from `world_force_from_tau`.
 
-## Motion retest after the mid-air handoff
+## Motion retest after the one-arm roll back
 
 Nominal seed 0, paper, `Session.run` then `check_pass`. Not a Monte Carlo.
 
 | Level | Result | Cup | Flow | Sim time |
 |---|---|---|---|---|
 | 1 | pass | 3.4 mm | 6.95 s | 55 s |
-| 2 | pass | 7.9 mm | 6.94 s | 158 s |
-| 3 | pass | 9.2 mm | 6.95 s | 164 s |
+| 2 | pass | 4.9 mm | 6.95 s | 102 s |
+| 3 | pass | 4.5 mm | 6.95 s | 109 s |
 | 4 | pass | 4.1 mm | 6.95 s | 71 s |
 | 5 | pass | 13.8 mm | 6.94 s | 76 s |
 
-Levels 2 and 3 still roll the cup with the wrist while the fingers hold it. It is not a free tumble. After the roll the other hand takes the cup in the air, lets it hang, and the first hand regrasps the middle. The cup is not set down. Level 4 closes on the centre of the knob, then closes around a circle until the handle stalls in the jaws. On this seed the handle is already at 45°. Level 5 pecks with the jaws at 62 mm. The wrist stays steep. The slide under the spout still dips 4 mm when the wrist can; the corridor is chosen so that dip is reachable.
+In Levels 2 and 3 the cup hand comes in with the wrist rolled half a turn the other way and closes on the middle of the inverted top cup. After the pull it rolls the wrist back to its normal position, so the cup comes out upright in the ordinary pour grip and goes straight to the spout. One arm holds the cup from the stack to the coaster; there is no hand-off and no set-down. It is an in-hand roll, not a free tumble. The grasp dips 8° (a level hand-up grasp puts J5 on its stop), so the cup leans 16° after the roll until the carry pitches the hand. In the sim the nested cups are tethered and do not collide, so squeezing the top cup at its middle does not also squeeze the cup inside it; on real cups that coupling is untested. Level 4 closes on the centre of the knob, then closes around a circle until the handle stalls in the jaws. On this seed the handle is already at 45°. Level 5 pecks with the jaws at 62 mm. The wrist stays steep. The slide under the spout still dips 4 mm when the wrist can; the corridor is chosen so that dip is reachable.
 
 ## Not done
 
-Randomized rates were not rerun, so 79 / 42 / 42 / 21 / 12 % is still the last measured table, on `32b5d08`, not a claim about the mid-air handoff or the circle search. Physics ablations of the stack torque and the cup tether were not run (`stack_assist` can be turned off; that run was not done). No 100-trial benchmark. No behavior cloning and no reinforcement learning. No hardware. No new physical measurements. `.github/workflows/sim.yml` and `pyproject.toml` are in the tree; the workflow has not been observed on GitHub, and the dependencies are not pinned to a lock solved on a clean machine. Scene-as-reset replay still fails. The flip is still an in-hand roll. The songs stay off the public site.
+Randomized rates were not rerun, so 79 / 42 / 42 / 21 / 12 % is still the last measured table, on `32b5d08`, not a claim about the one-arm roll back or the circle search. Physics ablations of the stack torque and the cup tether were not run (`stack_assist` can be turned off; that run was not done). No 100-trial benchmark. No behavior cloning and no reinforcement learning. No hardware. No new physical measurements. `.github/workflows/sim.yml` and `pyproject.toml` are in the tree; the dependencies are not pinned to a lock solved on a clean machine. Scene-as-reset replay still fails. The flip is still an in-hand roll. The songs stay off the public site.

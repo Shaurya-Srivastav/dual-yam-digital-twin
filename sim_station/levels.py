@@ -75,12 +75,12 @@ def pick_upright(ctx: Ctx, prefix: str, xy, base_z: float, first_deps=()) -> Lis
 def unstack_steps(ctx: Ctx, prefix: str = "", first_deps=()) -> List[StepDef]:
     p = prefix
     return [
-        _step(f"{p}cup.approach", "Cup arm: turn the wrist the other way, then move in", "Pick", "cup", [f"{p}cup.open"],
-              lambda c: S2.s_approach_stack(c), "wrist rolled to the flip attitude before the fingers reach the cup"),
+        _step(f"{p}cup.approach", "Cup arm: roll the wrist the other way, then move in", "Pick", "cup", [f"{p}cup.open"],
+              lambda c: S2.s_approach_stack(c), "hand upside down before the fingers reach the cup"),
         _step(f"{p}cup.slide_in", "Cup arm: slide the open fingers around the top cup", "Pick", "cup", [f"{p}cup.approach"],
               lambda c: S2.s_slide_in_stack(c), "3 cm/s, jam guard 5 N"),
         _step(f"{p}cup.close", "Cup arm: close on the top cup (gentle 15 N cap)", "Pick", "cup", [f"{p}cup.slide_in"],
-              lambda c: S2.s_close_stack(c), "jaws stall near 55 mm"),
+              lambda c: S2.s_close_stack(c), "jaws stall near 67 mm on the middle band"),
         _step(f"{p}tap.pin_approach", "Tap arm: move beside the lower stack", "Pick", "tap", [f"{p}cup.close"],
               lambda c: S2.s_pin_approach(c), "pads open 77.6 mm, level with the band under the top rim"),
         _step(f"{p}tap.pin", "Tap arm: pin the lower stack against the mat", "Pick", "tap", [f"{p}tap.pin_approach"],
@@ -91,25 +91,9 @@ def unstack_steps(ctx: Ctx, prefix: str = "", first_deps=()) -> List[StepDef]:
               lambda c: S2.s_pin_release(c), "pads open, hand clear"),
         _step(f"{p}tap.stow", "Tap arm: fold away from the stack", "Pick", "tap", [f"{p}tap.unpin"],
               lambda c: S.s_goto_rest(c, "tap"), "tap arm folded, out of the way"),
-        _step(f"{p}cup.flip_lift", "Cup arm: lift and roll, the wrist already turned the other way", "Pick", "cup", [f"{p}tap.stow", f"{p}cup.unstack"],
-              lambda c: S2.s_flip_lift(c), "rises clear, then rolls the other way, and finishes with the cup axis vertical"),
-        _step(f"{p}cup.square", "Cup arm: keep the cup in the air for the other hand", "Pick", "cup", [f"{p}cup.flip_lift"],
-              lambda c: S2.s_square_hold(c), "still in the fingers, not set down"),
-        _step(f"{p}tap.cradle", "Tap arm: take the cup in the air", "Pick", "tap", [f"{p}cup.square"],
-              lambda c: S2.s_cradle(c), "holds the cup above the pour band"),
-        _step(f"{p}tap.shift", "Tap arm: carry the cup clear, still in the air", "Pick", "tap", [f"{p}tap.cradle"],
-              lambda c: S2.s_cradle_shift(c), "out of the cup arm's wrist"),
-        _step(f"{p}cup.regrasp", "Cup arm: let go of the base and take the middle", "Pick", "cup", [f"{p}tap.shift"],
-              lambda c: S2.s_regrasp_mid(c), "the grasp the spout carry already uses"),
-        _step(f"{p}tap.clear", "Tap arm: let go and fold clear", "Pick", "tap", [f"{p}cup.regrasp"],
-              lambda c: S2.s_tap_clear(c), "cup arm alone has the cup"),
+        _step(f"{p}cup.flip_lift", "Cup arm: roll the wrist back to its normal position", "Pick", "cup", [f"{p}tap.stow", f"{p}cup.unstack"],
+              lambda c: S2.s_flip_lift(c), "cup upright in the ordinary pour grip, never set down"),
     ]
-
-
-def refind_steps(ctx: Ctx, prefix: str, after: str) -> List[StepDef]:
-    """The cup was set down flat, so its position is the release point. Grasp it there. Pecking would put the housing on it."""
-    p = prefix
-    return pick_upright(ctx, p + "re_", lambda c: c.bel.cup_xy, L.MAT_SURFACE_Z, first_deps=(after,))
 
 
 def build_level(level: int, ctx: Ctx) -> List[StepDef]:
@@ -119,7 +103,7 @@ def build_level(level: int, ctx: Ctx) -> List[StepDef]:
     if level == 2:
         first = [_step("cup.open", "Cup arm: open the jaws", "Pick", "cup", [], lambda c: S.s_open(c, "cup"), "jaws open")]
         steps = first + unstack_steps(ctx, "")
-        steps += serve_steps(ctx, "", "tap.clear", seat, tap_after=("cup.under",))
+        steps += serve_steps(ctx, "", "cup.flip_lift", seat, tap_after=("cup.flip_lift",))
         return steps
     if level == 3:
         steps = [
@@ -129,7 +113,7 @@ def build_level(level: int, ctx: Ctx) -> List[StepDef]:
             _step("cup.open", "Cup arm: open the jaws", "Pick", "cup", ["cup.height"], lambda c: S.s_open(c, "cup"), "jaws open"),
         ]
         steps += unstack_steps(ctx, "")
-        steps += serve_steps(ctx, "", "tap.clear", seat, tap_after=("cup.under",))
+        steps += serve_steps(ctx, "", "cup.flip_lift", seat, tap_after=("cup.flip_lift",))
         return steps
     if level == 4:
         steps = pick_upright(ctx, "", ctx.bel.cup_xy, seat) + serve_steps(ctx, "", "cup.lift", seat, tap_after=("tap.search",))

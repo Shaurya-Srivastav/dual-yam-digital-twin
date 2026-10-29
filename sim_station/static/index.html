@@ -191,8 +191,8 @@ a{color:var(--acc)}
 "use strict";
 const $ = (id) => document.getElementById(id);
 const LEVELS = [
-  [1, "Upright cup in the coaster", "known position"], [2, "Nested stack, height known", "flip, then hand it across in the air"],
-  [3, "Nested stack, height unknown", "peck, then hand it across in the air"], [4, "Lever angle unknown", "close around the knob to find the radius"], [5, "Cup in the search region", "stamp the mat, then fit"],
+  [1, "Upright cup in the coaster", "known position"], [2, "Nested stack, height known", "grasp upside down, roll the wrist back"],
+  [3, "Nested stack, height unknown", "peck, then the same one-arm roll"], [4, "Lever angle unknown", "close around the knob to find the radius"], [5, "Cup in the search region", "stamp the mat, then fit"],
 ];
 let S = null, cfg = {level: 1, material: "paper"}, tab = "run";
 const post = (u, b) => fetch(u, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(b || {})}).then(r => r.json());

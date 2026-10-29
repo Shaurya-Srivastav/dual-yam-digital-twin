@@ -42,14 +42,14 @@ Dance Mode plays three songs from `sim_station/assets/*.mp3`. Owning a copy of a
 ## The five levels
 
 1. Upright cup in the coaster, position known.
-2. Inverted nested stack on the coaster spot, height known: pin the lower stack with the tap arm, turn the cup hand into the flip attitude, grasp the top cup, wiggle, pull, **roll it upright with one arm** (see below), set it down, side-grasp, serve.
+2. Inverted nested stack on the coaster spot, height known: grasp the top cup with the cup hand upside down, pin the lower stack with the tap arm, wiggle, pull, then **roll the wrist back** so the cup comes up upright in the pour grip (see below), and serve. One arm holds the cup throughout; it is never set down or handed over.
 3. Same, height unknown (3 to 11 cups): peck down on the stack to count the cups.
-4. Lever angle unknown (it turns through a full 360°): sweep a fingertip around the valve, stop at the first touch (below the handle's breakaway force), compute the handle yaw from the known hand and handle shapes, park it, touch again to confirm.
+4. Lever angle unknown (it turns through a full 360°): close on the centre of the knob, then close at points around a circle until the handle stalls in the jaws; park it at the pour angle only if it is more than about 8° off.
 5. Cup anywhere on the mat: coarse peck grid, then a set-membership fit of where the cup must stand from every peck outcome. The next peck is the one that splits the remaining candidate centres about in half (not an expected-entropy computation).
 
 ### One-arm cup flip
 
-The wrist is turned to the flip attitude, about −65° off the arm's radial line and 8° down, **before** the fingers close on the top cup's base band. The lift off the stack, a 9 cm slide clear of it and one Cartesian roll of about 166° turn the cup upright. The wrist housing cannot follow the cup base the last few centimetres, so the cup is let go a short height above the mat and lands on its base. The attitude was found by an IK search over hand attitudes (`skills_l2.flip_motion`); it is not the gravitational pivoting of Toskov et al.
+The cup hand is rolled half a turn the other way, about −65° off the arm's radial line and 8° down, **before** the fingers close on the middle of the inverted top cup. The inverted cup then sits in the hand exactly as an upright cup sits in the normal side grasp, only upside down. After the pull, the hand rises, slides 9 cm clear of the stack and rolls the wrist back half a turn to its normal position: the cup comes out upright in the same grip Level 1 carries with, and goes straight to the spout. No second hand and no set-down. The 8° dip (a level hand-up grasp puts J5 on its stop) leaves a 16° lean that the carry to the spout takes out by pitching the hand (`hold_pitch`). The attitude comes from an IK search (`skills_l2.plan_pregrasp`); it is an in-hand roll, not the gravitational pivoting of Toskov et al. In the sim the nested cups do not collide, so the squeeze at the middle band is not coupled into the inner cup the way it would be on real cups.
 
 ## Honest status
 

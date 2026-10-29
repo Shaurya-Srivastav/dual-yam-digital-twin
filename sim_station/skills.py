@@ -34,22 +34,9 @@ def side_frame(kin, xy, z, off=-9.0, tilt=0.0, depth=0.0) -> np.ndarray:
     return frame_from(a, j, np.array([xy[0], xy[1], z]) + a * depth)
 
 
-# After the flip the fingers are on the base band, so the same cup centre sits this far above the TCP.
-PALM_DROP = 0.048
-
-
 def pour_frame(ctx: Ctx, kin, xy, z, tilt=0.0, depth=0.0) -> np.ndarray:
-    """The spout and coaster frames. A palm-up hold keeps the wrist from the flip and lowers the TCP by the base-band offset."""
-    z = float(z)
-    if ctx.scratch.get("palm_up"):
-        z -= PALM_DROP
-        T = side_frame(kin, xy, z, off=0.0, tilt=tilt, depth=depth)
-        out = np.eye(4)
-        out[:3, :3] = rot_about(T[:3, 2], np.pi) @ T[:3, :3]
-        out[:3, 3] = T[:3, 3]
-        return out
-    z -= float(ctx.scratch.get("spout_drop") or 0.0)
-    return side_frame(kin, xy, z, tilt=tilt, depth=depth)
+    """The spout and coaster frames. `tilt` is the cup's lean; `hold_pitch` is the hand pitch that holds this grasp's cup vertical."""
+    return side_frame(kin, xy, float(z), tilt=tilt + float(ctx.scratch.get("hold_pitch") or 0.0), depth=depth)
 
 
 def fmt_mm(x: float) -> str:
@@ -321,11 +308,11 @@ def s_slide_under(ctx: Ctx):
     tilt = ctx.scratch.get("spout_tilt", 0.0)
     # The carry can leave the cup leaning a few degrees in the fingers. The high side of the rim
     # then meets the spout tip if the slide stays at the final height, so come in low and rise
-    # only once the tip is over the mouth. A handoff grasp sometimes sits a millimetre outside
-    # the wrist's reach at that height, so the next tries are a couple of millimetres higher.
+    # only once the tip is over the mouth. A grasp that sits a millimetre outside the wrist's
+    # reach at that height gets the next tries, a couple of millimetres higher.
     traj = None
     last = "no slide"
-    # The first try is the 4 mm dip the nominal pour uses. A handoff that leaves the wrist
+    # The first try is the 4 mm dip the nominal pour uses. A grasp that leaves the wrist
     # on its stop cannot dip, so the later tries come in level, a little higher.
     for lift, step, dip, creep in ((0.0, 0.2, 0.004, False), (0.003, 0.24, 0.004, False), (0.006, 0.24, 0.004, False),
                                    (0.0, 0.25, 0.006, True), (0.004, 0.28, 0.004, True)):
@@ -401,7 +388,7 @@ def s_to_coaster(ctx: Ctx, seat_z: float):
         raise SkillFault("the coaster cannot be reached with the cup upright")
     ctx.scratch["coaster_tilt"] = chosen[0]
     z_mid = max(top_over(ctx) + 0.08, 0.28) if ctx.bel.stack_n is not None else 0.22
-    z_over = z_mid - (PALM_DROP if ctx.scratch.get("palm_up") else 0.0)
+    z_over = z_mid
     up = T0.copy()
     up[2, 3] = max(float(T0[2, 3]), z_over)
     across = chosen[1].copy()
@@ -440,7 +427,7 @@ def s_place_cup(ctx: Ctx, seat_z: float):
     kin = ctx.kin["cup"]
     cx, cy = ctx.bel.coaster_xy
     T0 = ctx.tcp("cup")
-    z_goal = seat_z + HOLD_DZ - 0.004 - (PALM_DROP if ctx.scratch.get("palm_up") else 0.0)
+    z_goal = seat_z + HOLD_DZ - 0.004
     T1 = T0.copy()
     T1[2, 3] = z_goal
     plan = ctx.cart_repair("cup", [T0, T1], v_cart=0.018, min_T=1.0)
