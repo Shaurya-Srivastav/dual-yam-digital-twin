@@ -16,3 +16,5 @@ jobs:
         run: pip install numpy scipy
       - name: checks that do not load MuJoCo
         run: python tests/test_offline.py
+        env:
+          PYTHONPATH: ${{ github.workspace }}
