@@ -1041,7 +1041,7 @@ def s_flip_lift(ctx: Ctx):
     w_other = ctx.width(other)
 
     def _solid(q):
-        hits = ctx.plant.collisions_for({"cup": q, other: L.REST_Q}, {"cup": w0, other: w_other})
+        hits = ctx.plant.collisions_for({"cup": q, other: L.REST_Q}, {"cup": w0, other: w_other}, ctx.collision_scene())
         return [h for h in hits if "pad" not in "".join(h) and "finger" not in "".join(h)]
 
     leaving = {tuple(sorted(h)) for h in _solid(ctx.q("cup"))}
@@ -1126,7 +1126,7 @@ def s_flip_set(ctx: Ctx):
         if not r.ok:
             break
         hits = ctx.plant.collisions_for({"cup": r.q, "tap": ctx.q("tap")},
-                                        {"cup": ctx.width("cup"), "tap": ctx.width("tap")})
+                                        {"cup": ctx.width("cup"), "tap": ctx.width("tap")}, ctx.collision_scene())
         if any("pad" not in "".join(h) and "finger" not in "".join(h) for h in hits):
             break
         z_floor = float(z)

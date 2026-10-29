@@ -32,7 +32,7 @@ git clone https://github.com/Shaurya-Srivastav/dual-yam-digital-twin && cd dual-
 git clone https://github.com/i2rt-robotics/i2rt third_party/i2rt     # arm and gripper models (or set I2RT_PATH)
 pip install -r requirements.txt            # Python 3.11, macOS or Linux; ffmpeg needed for Dance Mode
 ./run_sim.sh                               # http://127.0.0.1:8090
-python -m sim_station.selftest             # all five levels + real-data replay, headless
+python -m sim_station.selftest             # nominal levels + pose-aligned replay. Not the randomized rates. See docs/STATUS.md
 python -m sim_station.evaluate --levels 1 2 3 4 5 --trials 50 --jobs 8
 python -m sim_station.proofs               # replay of the real Level 1 waypoints + IK equivalence
 ```
@@ -59,6 +59,8 @@ See [docs/RESULTS.md](docs/RESULTS.md). Short version: the nominal (no randomiza
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): control loop, sensing, skills, referee
 - [docs/RESULTS.md](docs/RESULTS.md): measured numbers and open problems
+- [docs/STATUS.md](docs/STATUS.md): which claims are measured, simulated, or not run
+- [docs/FRONTIER_ROADMAP.md](docs/FRONTIER_ROADMAP.md): what is still open, in order
 - [docs/RESEARCH.md](docs/RESEARCH.md): the literature behind the search and flip methods
 
 The twin does not use cameras anywhere. Skills never read true object poses; only the referee (`runner.check_pass`) and the debug overlay do.

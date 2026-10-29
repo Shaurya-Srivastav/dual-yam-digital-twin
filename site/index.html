@@ -48,7 +48,7 @@ footer{max-width:1120px;margin:80px auto 0;padding:24px 20px 60px;border-top:1px
 </style>
 </head>
 <body>
-<nav><div><b>Dual-YAM digital twin</b><a href="#papers">Papers</a><a href="#levels">Levels</a><a href="#dance">Dance</a><a href="#how">How it works</a><a href="#status">Honest status</a><a href="#proof">Proofs</a><a href="#run">Run it</a><a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">GitHub</a></div></nav>
+<nav><div><b>Dual-YAM digital twin</b><a href="#papers">Papers</a><a href="#levels">Levels</a><a href="#dance">Dance</a><a href="#how">How it works</a><a href="#status">Honest status</a><a href="#proof">Checks</a><a href="#run">Run it</a><a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">GitHub</a></div></nav>
 
 <section style="padding-top:64px">
   <h1>Two arms. One dry dispenser.<br><span style="color:var(--acc)">No cameras.</span></h1>
@@ -153,11 +153,12 @@ footer{max-width:1120px;margin:80px auto 0;padding:24px 20px 60px;border-top:1px
 </section>
 
 <section id="proof">
-  <h2>Proofs it matches the real station</h2>
+  <h2>Recorded-waypoint checks</h2>
+  <p class="muted">These do not show the MuJoCo scene is a 1:1 copy of the physical station. Nothing here has run on the arms.</p>
   <div class="cols">
-    <div class="panel"><h3>Real-data replay</h3><p>The taught Level 1 waypoints recorded on the physical robot, played through the simulated control loop: the cup comes out of the coaster, goes under the outlet and returns.</p>
+    <div class="panel"><h3>Pose-aligned replay</h3><p>The taught Level 1 waypoints, played through the simulated control loop. Before playback the cup is moved to the recorded grasp, 2 cm off the coaster centre, because that is where the real hand closed. It is not an independent check of the station layout. A second replay that leaves the cup where the level reset put it is printed by <code>python -m sim_station.selftest</code> and is not claimed as a pass.</p>
       <table><tr><td>Cup to outlet axis</td><td class="k"><b>0.9 mm</b> (limit 5 mm)</td></tr><tr><td>Back in coaster</td><td>8.9 mm from centre</td></tr><tr><td>Max tilt in hand</td><td>6.9°</td></tr></table></div>
-    <div class="panel"><h3>IK equivalence</h3><p>For all 12 taught Level 1 poses, strict Cartesian IK from unrelated seeds reproduces the real hand pose: <b class="k">≤ 0.4 mm and 0.01°</b>, so the skills use Cartesian goals, not cloned joint angles.</p></div>
+    <div class="panel"><h3>FK/IK self-consistency</h3><p>For all 12 taught Level 1 joint vectors, strict Cartesian IK from unrelated seeds reproduces this model's own forward kinematics of those joints: <b class="k">≤ 0.4 mm and 0.01°</b>. That shows the skills can target a Cartesian pose instead of copying joint angles. It is not a surveyed check of the real hand pose.</p></div>
     <div class="panel"><h3>Monte Carlo referee</h3><p>Headless runs per level with a failure histogram, success rate, time, peak grip force, maximum tilt and spout clearance: <code>python -m sim_station.evaluate</code>. Results above.</p></div>
   </div>
 </section>

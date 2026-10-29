@@ -384,8 +384,9 @@ class Station:
         out.append((mujoco.mjtGeom.mjGEOM_CYLINDER, [0.036, 0.0015, 0], [truth[0], truth[1], z + 0.002], [1.0, 0.55, 0.1, 0.6], eye))
         piv = ctx.bel.lever_pivot
         psi = ctx.bel.lever_yaw
-        out.append((mujoco.mjtGeom.mjGEOM_CAPSULE, [0.003, 0.03, 0], [piv[0] + 0.03 * np.cos(psi), piv[1] + 0.03 * np.sin(psi), piv[2] + 0.012],
-                    [0.1, 0.85, 0.95, 0.9], np.array([[-np.sin(psi), 0, np.cos(psi)], [np.cos(psi), 0, np.sin(psi)], [0, 1, 0]]).T))
+        if np.isfinite(psi):
+            out.append((mujoco.mjtGeom.mjGEOM_CAPSULE, [0.003, 0.03, 0], [piv[0] + 0.03 * np.cos(psi), piv[1] + 0.03 * np.sin(psi), piv[2] + 0.012],
+                        [0.1, 0.85, 0.95, 0.9], np.array([[-np.sin(psi), 0, np.cos(psi)], [np.cos(psi), 0, np.sin(psi)], [0, 1, 0]]).T))
         yaw = P.lever_yaw()
         out.append((mujoco.mjtGeom.mjGEOM_CAPSULE, [0.0025, 0.03, 0], [piv[0] + 0.03 * np.cos(yaw), piv[1] + 0.03 * np.sin(yaw), piv[2] + 0.018],
                     [1.0, 0.55, 0.1, 0.9], np.array([[-np.sin(yaw), 0, np.cos(yaw)], [np.cos(yaw), 0, np.sin(yaw)], [0, 1, 0]]).T))
@@ -420,7 +421,9 @@ class Station:
                 tracks=[dict(id=k, title=v["title"], artist=v["artist"], url=f"/audio/{k}", bpm=(round(A.load(k).bpm, 1) if A.load(k) else None),
                              beats=(len(A.load(k).beats) if A.load(k) else 0), duration=(round(A.load(k).duration) if A.load(k) else 0)) for k, v in A.SONGS.items()],
                 analysis=dict(A.status),
-                beliefs=dict(cup=[round(float(x), 3) for x in ctx.bel.cup_xy] if ctx.bel.cup_xy is not None else None, lever_yaw=round(float(np.degrees(ctx.bel.lever_yaw)), 1),
+                beliefs=dict(cup=[round(float(x), 3) for x in ctx.bel.cup_xy] if ctx.bel.cup_xy is not None else None,
+                             lever_yaw=(round(float(np.degrees(ctx.bel.lever_yaw)), 1) if np.isfinite(ctx.bel.lever_yaw) else None),
+                             lever_yaw_known=bool(np.isfinite(ctx.bel.lever_yaw)),
                              true_lever_yaw=round(float(np.degrees(P.lever_yaw())), 1), true_cup=[round(float(x), 3) for x in P.cup_state()["xyz"][:2]]),
                 violations=[(v["kind"], v["a"], v["b"]) for v in P.violations.values() if v["kind"] != "arm_mat"][:6],
             )

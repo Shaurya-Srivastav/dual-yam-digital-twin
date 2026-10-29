@@ -653,9 +653,18 @@ class Plant:
         mujoco.mj_forward(self.model, self.data)
 
     # --------------------------------------------------------- collision queries
-    def collisions_for(self, q: Dict[str, np.ndarray], grip: Optional[Dict[str, float]] = None) -> List[Tuple[str, str]]:
-        """Contacts of the arms with static/passive world and each other for given joint vectors (objects ignored)."""
+    def collisions_for(self, q: Dict[str, np.ndarray], grip: Optional[Dict[str, float]] = None,
+                       scene: Optional[dict] = None) -> List[Tuple[str, str]]:
+        """Arm contacts for a proposed joint vector.
+
+        Movable objects are placed from `scene` (the skill's belief), never from the live cup or stack pose.
+        `scene` keys, all optional: cup_xy, stack_xy, stack_n, coaster_xy, lever_yaw, cup_in_hand.
+        A missing cup or an unknown lever yaw is left out of the query. That is not the same as knowing the
+        space is empty: the referee still scores the true contacts afterwards.
+        Fingertip pads may touch a cup, the remaining stack and the lever. Nothing else may.
+        """
         s = self.scratch
+        m = self.model
         s.qpos[:] = self.data.qpos
         s.qvel[:] = 0.0
         for arm in ARMS:
@@ -664,28 +673,59 @@ class Plant:
                 s.qpos[a.qpos] = q[arm]
             w = (grip or {}).get(arm, 0.0776)
             s.qpos[a.g_qpos] = 0.5 * w
-        mujoco.mj_kinematics(self.model, s)
-        mujoco.mj_collision(self.model, s)
+        scene = scene or {}
+        for name in ("paper_cup", "plastic_cup", "paper_rest", "plastic_rest"):
+            self._scratch_park(s, name)
+        if not scene.get("cup_in_hand"):
+            cup_xy = scene.get("cup_xy")
+            if cup_xy is not None:
+                self._scratch_place(s, self.active_cup, cup_xy, L.MAT_SURFACE_Z + 0.5 * L.CUP_HEIGHT + 0.0006)
+            elif scene.get("stack_xy") is not None and scene.get("stack_n"):
+                n = int(scene["stack_n"])
+                z = L.MAT_SURFACE_Z + 0.0004 + max(n - 1, 0) * L.NEST_STEP + 0.5 * L.CUP_HEIGHT
+                self._scratch_place(s, self.active_cup, scene["stack_xy"], z, quat=(0.0, 1.0, 0.0, 0.0))
+        if scene.get("stack_xy") is not None and m.body_gravcomp[self.body[self.active_rest]] == 0.0:
+            self._scratch_place(s, self.active_rest, scene["stack_xy"], L.MAT_SURFACE_Z + 0.0004)
+        yaw = scene.get("lever_yaw")
+        lever_known = yaw is not None and np.isfinite(yaw)
+        if lever_known:
+            s.qpos[self.yaw_q] = float(yaw)
+        saved_coaster = m.body_pos[self.body["coaster"]].copy()
+        if scene.get("coaster_xy") is not None:
+            m.body_pos[self.body["coaster"]][:2] = np.asarray(scene["coaster_xy"], dtype=float)[:2]
+        try:
+            mujoco.mj_kinematics(m, s)
+            mujoco.mj_collision(m, s)
+        finally:
+            m.body_pos[self.body["coaster"]] = saved_coaster
+        arm_g = self._arm_geoms["cup"] | self._arm_geoms["tap"]
+        cup_g = set(self.geoms_of["paper_cup"] + self.geoms_of["plastic_cup"] + self.geoms_of["paper_rest"] + self.geoms_of["plastic_rest"])
+        lever_g = {mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, n) for n in ("lever_stem", "lever_paddle", "lever_boss", "lever_cap")}
         out = []
-        ignore = set(self.geoms_of["paper_cup"] + self.geoms_of["plastic_cup"] + self.geoms_of["paper_rest"] +
-                     self.geoms_of["plastic_rest"] + self.geoms_of["coaster"])
-        # what is left of a stack is an obstacle for everything except the fingertips that are meant to touch it
-        stack_g = set()
-        if self.stack_is_obstacle and self.level in (2, 3) and self.model.body_gravcomp[self.body[self.active_rest]] == 0.0:
-            stack_g = {g for g in self.geoms_of[self.active_rest] if self.model.geom_contype[g] or self.model.geom_conaffinity[g]}
-            ignore -= stack_g
-        lever_geoms = {mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, n) for n in ("lever_stem", "lever_paddle")}
         for i in range(s.ncon):
             c = s.contact[i]
             g1, g2 = int(c.geom1), int(c.geom2)
-            if g1 in ignore or g2 in ignore or g1 in lever_geoms or g2 in lever_geoms:
+            if g1 not in arm_g and g2 not in arm_g:
                 continue
-            if stack_g and ((g1 in stack_g and (mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, g2) or "").find("_pad") >= 0) or
-                            (g2 in stack_g and (mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, g1) or "").find("_pad") >= 0)):
+            if not lever_known and (g1 in lever_g or g2 in lever_g):
                 continue
-            out.append((mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, g1) or str(g1),
-                        mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, g2) or str(g2)))
+            n1 = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_GEOM, g1) or ""
+            n2 = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_GEOM, g2) or ""
+            other = g2 if g1 in arm_g else g1
+            arm_name = n1 if g1 in arm_g else n2
+            if "_pad" in arm_name and (other in cup_g or other in lever_g):
+                continue
+            out.append((n1 or str(g1), n2 or str(g2)))
         return out
+
+    def _scratch_park(self, s, name: str) -> None:
+        qa = self.free_qadr[name]
+        slot = {"paper_cup": (0.0, -1.0), "plastic_cup": (0.3, -1.0), "paper_rest": (0.0, -1.3), "plastic_rest": (0.3, -1.3)}[name]
+        s.qpos[qa: qa + 7] = [slot[0], slot[1], PARK_Z, 1, 0, 0, 0]
+
+    def _scratch_place(self, s, name: str, xy, z: float, quat=(1.0, 0.0, 0.0, 0.0)) -> None:
+        qa = self.free_qadr[name]
+        s.qpos[qa: qa + 7] = [float(xy[0]), float(xy[1]), float(z), *quat]
 
     def cup_hits_arm(self, arm: str, q: np.ndarray, grip: float, cup_xy: np.ndarray) -> bool:
         """Would an upright cup standing at cup_xy touch this arm at joint vector q? This is the planner's model query

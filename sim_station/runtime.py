@@ -99,6 +99,19 @@ class Ctx:
     def event(self, msg: str) -> None:
         self.events.append((self.plant.time, msg))
 
+    def collision_scene(self) -> dict:
+        """What the planner is allowed to know: calibrated belief, not the live object pose."""
+        b = self.bel
+        yaw = float(b.lever_yaw)
+        return dict(
+            cup_xy=None if b.cup_in_hand or b.cup_xy is None else np.asarray(b.cup_xy, dtype=float),
+            stack_xy=None if b.stack_xy is None else np.asarray(b.stack_xy, dtype=float),
+            stack_n=b.stack_n,
+            coaster_xy=np.asarray(b.coaster_xy, dtype=float),
+            lever_yaw=yaw if np.isfinite(yaw) else None,
+            cup_in_hand=bool(b.cup_in_hand),
+        )
+
     def sense(self, force: bool = False) -> None:
         for arm in ARMS:
             obs = self.plant.read_arm(arm)
@@ -185,9 +198,10 @@ class Ctx:
         step = max(int(stride_s / traj.dt), 1)
         k0 = min(int(0.12 / traj.dt), len(traj) - 1)         # a path may start touching what the last guarded move touched
         # contacts already present where the path begins are what we are leaving, not what we would run into
-        leaving = {tuple(sorted(h)) for h in self.plant.collisions_for({arm: traj.q[0], other: qo}, {arm: w, other: self.width(other)})}
+        scene = self.collision_scene()
+        leaving = {tuple(sorted(h)) for h in self.plant.collisions_for({arm: traj.q[0], other: qo}, {arm: w, other: self.width(other)}, scene)}
         for k in list(range(k0, len(traj), step)) + [len(traj) - 1]:
-            hits = self.plant.collisions_for({arm: traj.q[k], other: qo}, {arm: w, other: self.width(other)})
+            hits = self.plant.collisions_for({arm: traj.q[k], other: qo}, {arm: w, other: self.width(other)}, scene)
             hits = [h for h in hits if not self._benign(h) and tuple(sorted(h)) not in leaving]
             if hits:
                 raise PlanError(f"{arm} arm path collides at {k * traj.dt:.2f}s: {hits[0][0]} / {hits[0][1]}")

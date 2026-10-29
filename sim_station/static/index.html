@@ -158,7 +158,8 @@ a{color:var(--acc)}
       <div class="muted" id="mcProg" style="margin:6px 0"></div>
       <table id="mcTable"><thead><tr><th>Level</th><th>Pass</th><th>Target</th><th>Time</th><th>Peak grip</th><th>Max tilt</th></tr></thead><tbody></tbody></table>
       <div id="mcReasons" class="muted" style="margin-top:8px"></div>
-      <h3>1:1 with the real station</h3>
+      <h3>Recorded Level 1 waypoints</h3>
+      <p class="muted" style="font-size:12px">The replay moves the cup to the recorded grasp before it plays. That is a pose-aligned check, not a measurement that this scene matches the physical station. The Cartesian check is FK/IK self-consistency on this model.</p>
       <div class="row"><button class="btn" id="bReplay">Replay real Level 1 waypoints</button><button class="btn" id="bEquiv">Cartesian vs replay</button></div>
       <div id="proofOut" style="margin-top:var(--s1)"></div>
     </section>
@@ -405,7 +406,7 @@ function proofs() {
   $("mcReasons").innerHTML = Object.entries(S.mc.results || {}).map(([l, r]) => `<div><b>L${l}</b> ` + r.failure_reasons.map(([m, n]) => `${n}× ${m}`).join(" · ") + "</div>").join("");
   const P = S.proof, o = $("proofOut"); if (P.running) { o.innerHTML = `<span class="muted">running ${P.kind}…</span>`; return; } const r = P.result; if (!r) { o.innerHTML = ""; return; }
   if (r.error) { o.innerHTML = `<span class="bad">${r.error}</span>`; return; }
-  if (r.kind === "replay_l1") o.innerHTML = `<div class="${r.ok ? "ok" : "bad"}"><b>${r.ok ? "Replay passes" : "Replay fails"}</b></div><div class="kv mono"><span>cup lifted out</span><span>${r.lifted_out_of_coaster}</span><span>under the outlet</span><span>${fmt(r.under_outlet_mm, 1)} mm (≤ 5)</span><span>back in coaster</span><span>${fmt(r.returned_to_coaster_mm, 1)} mm</span><span>max tilt</span><span>${fmt(r.max_tilt_deg, 1)}°</span></div>`;
+  if (r.kind === "replay_l1" || r.kind === "replay_l1_scene") o.innerHTML = `<div class="${r.ok ? "ok" : "bad"}"><b>${r.ok ? "Replay passes" : "Replay fails"}</b> <span class="muted">(${r.evidence || r.kind})</span></div><div class="kv mono"><span>cup lifted out</span><span>${r.lifted_out_of_coaster}</span><span>under the outlet</span><span>${fmt(r.under_outlet_mm, 1)} mm (≤ 5)</span><span>back in coaster</span><span>${fmt(r.returned_to_coaster_mm, 1)} mm</span><span>max tilt</span><span>${fmt(r.max_tilt_deg, 1)}°</span></div>`;
   else o.innerHTML = `<div class="${r.ok ? "ok" : "bad"}"><b>${r.ok ? "IK reproduces every real pose" : "IK mismatch"}</b></div><table><tr><th>waypoint</th><th>pos mm</th><th>ori °</th></tr>${r.ik_rows.map(x => `<tr><td>${x.waypoint}</td><td>${x.pos_mm}</td><td>${x.ori_deg}</td></tr>`).join("")}</table><div class="muted" style="margin-top:6px">Skill poses vs real: ${r.skill_rows.map(x => `${x.moment}: ${x.pos_mm} mm, ${x.ori_deg}°`).join(" · ")}</div>`;
 }
 /* ------------------------------------------------------------------ dance mode */

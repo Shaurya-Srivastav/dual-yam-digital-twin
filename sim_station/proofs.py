@@ -1,10 +1,13 @@
-"""Proof that the twin is 1:1 with the real station (items 33 and 34).
+"""Recorded-waypoint checks. These are not a 1:1 proof of the physical station.
 
-replay_l1       plays the real Level 1 joint waypoints from the Pi log through the same control loop and lets physics decide whether
-                the cup comes out of the coaster, goes under the outlet and goes back. A failure here is a calibration or geometry
-                error, never something to tune away in the controller.
-equivalence_l1  asks, for every real L1 waypoint, whether our strict Cartesian IK reproduces the real hand pose, and how far the
-                poses our skills command (grasp, seat) are from the real ones.
+replay_l1            pose-aligned. Before playback it moves the simulated cup to the XY of the recorded grasp,
+                     because that grasp and the in-coaster waypoint are 2 cm apart. It checks that the control
+                     loop can carry a cup that started in the hand's recorded grasp, not that the scene geometry
+                     independently matches the station.
+replay_l1_scene      the same waypoints with the cup left where the level reset put it. A miss here is the
+                     geometry gap the aligned replay hides.
+equivalence_l1       FK/IK numerical consistency: the targets are this model's own forward kinematics of the
+                     recorded joint vectors, not surveyed hand poses.
 """
 
 from __future__ import annotations
@@ -42,7 +45,7 @@ def _play(S: Session, q_to: np.ndarray, T: float, width: float, cap: float, hold
         S._observe()
 
 
-def replay_l1(material: str = "paper") -> dict:
+def replay_l1(material: str = "paper", align_cup: bool = True) -> dict:
     S = Session()
     S.reset(1, material, seed=0)
     P = S.plant
@@ -51,10 +54,11 @@ def replay_l1(material: str = "paper") -> dict:
     # the real cup started where the real hand closed on it: 2 cm beside the recess centre (the grasp and in_coaster poses are 2.0 cm apart)
     kin = S.ctx.kin["cup"]
     g = kin.fk(W["grasp"][:6])[:3, 3]
-    qa = P.free_qadr[P.active_cup]
-    P.data.qpos[qa: qa + 2] = g[:2]
-    mujoco_forward = __import__("mujoco").mj_forward
-    mujoco_forward(P.model, P.data)
+    if align_cup:
+        qa = P.free_qadr[P.active_cup]
+        P.data.qpos[qa: qa + 2] = g[:2]
+        mujoco_forward = __import__("mujoco").mj_forward
+        mujoco_forward(P.model, P.data)
     for _ in range(200):
         P.step(1)
     c0 = P.cup_state()["xyz"].copy()
@@ -86,7 +90,9 @@ def replay_l1(material: str = "paper") -> dict:
     outlet_err = [r["to_outlet_mm"] for r in log if r["step"] == "under_spout"]
     end = log[-1]
     res = dict(
-        kind="replay_l1", material=material,
+        kind="replay_l1" if align_cup else "replay_l1_scene", material=material,
+        evidence="pose_aligned" if align_cup else "scene_as_reset",
+        cup_start_moved=bool(align_cup),
         lifted_out_of_coaster=any(r["cup_xyz"][2] > c0[2] + 0.02 for r in log),
         under_outlet_mm=outlet_err[0] if outlet_err else None,
         under_outlet_ok=bool(outlet_err and outlet_err[0] <= 5.0),
@@ -95,6 +101,11 @@ def replay_l1(material: str = "paper") -> dict:
     )
     res["ok"] = bool(res["lifted_out_of_coaster"] and res["under_outlet_ok"] and res["returned_ok"])
     return res
+
+
+def replay_l1_scene(material: str = "paper") -> dict:
+    """Same waypoints, cup left on the reset coaster. Not a substitute for the aligned replay."""
+    return replay_l1(material, align_cup=False)
 
 
 def _pose_err(Ta: np.ndarray, Tb: np.ndarray) -> Dict[str, float]:
@@ -126,7 +137,7 @@ def equivalence_l1() -> dict:
     seat = L.COASTER_FLOOR_Z + 0.07
     fr2 = ctx.side_frames("cup", ctx.bel.coaster_xy, seat, depth=0.004, standoff=0.05)
     cmp_rows.append(dict(moment="in_coaster (hand pose at the seat)", **{k: round(v, 1) for k, v in _pose_err(fr2["grasp"], kin.fk(W["in_coaster"][:6])).items()}))
-    out = dict(kind="equivalence_l1", ik_rows=rows, skill_rows=cmp_rows)
+    out = dict(kind="equivalence_l1", evidence="fk_ik_self_consistency", ik_rows=rows, skill_rows=cmp_rows)
     out["ik_ok"] = all(r["ik_ok"] and r["pos_mm"] <= 2.0 and r["ori_deg"] <= 2.0 for r in rows)
     out["skills_within"] = all(r["pos_mm"] <= 20.0 and r["ori_deg"] <= 25.0 for r in cmp_rows)
     out["ok"] = bool(out["ik_ok"])

@@ -2,7 +2,11 @@
 
 **Real-data replay of the Level 1 Pi waypoints** (`python -m sim_station.proofs`): cup lifted from the coaster, **0.9 mm** from the outlet axis under the spout, back in the coaster 8.9 mm from centre, max tilt 6.9°. To get this the coaster dish had to be widened (the real grasp sits 2.0 cm from the real placement). Confirm the dish radius with calipers.
 
-**IK vs the 12 real waypoints:** all reproduced within 0.4 mm and 0.01°.
+**Scene-as-reset replay** (same waypoints, cup not moved onto the grasp): fail. 105.7 mm from the outlet axis, 19.7 mm from the coaster centre. The aligned replay above is not this test.
+
+**IK vs the 12 real waypoints:** this model's forward kinematics, reproduced within 0.4 mm and 0.01°. Not a surveyed hand pose.
+
+**Nominal selftest after the belief collision query** (`python -m sim_station.selftest`, exit 0): Levels 1–5 pass (cup 4, 12, 12, 3, 10 mm). The referee thresholds were not changed.
 
 **Nominal run of each level** (`python -m sim_station.selftest`, no randomization): all five pass the full referee.
 

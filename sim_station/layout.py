@@ -96,7 +96,7 @@ def tap_local_to_world(local_xyz) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 CUP_HEIGHT = 0.110
-CUP_RIM_RADIUS = 0.038          # 76 mm rim
+CUP_RIM_RADIUS = 0.038          # 76 mm rim. An earlier onsite estimate was about 90 mm. Not remeasured; do not treat 76 mm as surveyed.
 CUP_BASE_RADIUS = 0.027         # 54 mm base
 CUP_WALL_THICK = 0.0018
 CUP_STAVE_COUNT = 16
