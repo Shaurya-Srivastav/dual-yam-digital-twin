@@ -3,7 +3,7 @@
     python tools/make_videos.py level 2 site/videos/level2.mp4
     python tools/make_videos.py dance rick site/videos/dance_rick.mp4 [start_s] [seconds]
 
-Dance videos are silent (the songs are copyrighted); the dots show the tracked beat. Captions are drawn from the executor's own step titles.
+Dance videos carry no audio track (the songs are copyrighted); the dots show the tracked beat. Captions are drawn from the executor's own step titles.
 """
 import json
 import subprocess
@@ -120,7 +120,7 @@ def dance(song: str, out: str, start: float = 30.0, seconds: float = 36.0) -> No
         if t >= nxt:
             nxt += 1.0 / FPS
             r.update_scene(P.data, camera=cam)
-            im = caption(r.render(), [f"{A.SONGS[song]['title']}  ·  {A.SONGS[song]['artist']}", f"move: {ch.info.get('move', 'ready')}  ·  {an.bpm:.0f} BPM tracked from the audio  ·  silent video"])
+            im = caption(r.render(), [f"{A.SONGS[song]['title']}  ·  {A.SONGS[song]['artist']}", f"move: {ch.info.get('move', 'ready')}  ·  {an.bpm:.0f} BPM tracked from the audio"])
             d = ImageDraw.Draw(im, "RGBA")
             b = ch.info.get("beat", 0.0) if t >= 4.0 else -1
             for i in range(4):

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,7 +8,7 @@
 <meta property="og:title" content="Dual-YAM digital twin">
 <meta property="og:description" content="Two robot arms, one dry dispenser, five levels of uncertainty, no cameras.">
 <meta property="og:image" content="videos/level2.jpg">
-<meta name="theme-color" content="#0b0d12">
+<meta name="theme-color" content="#f4f1ea">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -21,10 +21,31 @@
   --r:14px;
 }
 [data-theme=light]{
-  --bg:#f6f7fb;--bg2:#eef0f6;--surface:#ffffff;--surface2:#f3f5fa;--line:rgba(15,20,35,.09);--line2:rgba(15,20,35,.16);
-  --text:#121622;--soft:#323a4c;--muted:#5f687a;--accent:#3b6cf6;--accent2:#c9711d;--ok:#16924f;--warn:#a87a06;--bad:#d03a3a;
-  --glow:rgba(59,108,246,.12);--shadow:0 16px 48px rgba(20,30,60,.12);
+  --bg:#f4f1ea;--bg2:#efeae1;--surface:#fbf9f4;--surface2:#efeae1;--line:#ddd6c8;--line2:#cfc6b4;
+  --text:#1b1814;--soft:#3c3832;--muted:#6a635a;--accent:#8d3b22;--accent2:#b07a1f;--ok:#1c6b43;--warn:#8a5a12;--bad:#922e2e;
+  --glow:transparent;--shadow:0 14px 40px rgba(27,24,20,.10);--r:4px;
+  --serif:"Iowan Old Style",Palatino,"Palatino Linotype","Book Antiqua",Georgia,serif;
 }
+[data-theme=light] body::before{display:none}
+[data-theme=light] h1,[data-theme=light] h2,[data-theme=light] h3{font-family:var(--serif);font-weight:500;letter-spacing:-.02em}
+[data-theme=light] h1{font-size:clamp(46px,6.4vw,80px);line-height:.98}
+[data-theme=light] h1 .grad{background:none;color:var(--text)}
+[data-theme=light] h3{font-weight:560}
+[data-theme=light] nav{background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:none;-webkit-backdrop-filter:none}
+[data-theme=light] .brand{font-family:var(--serif);font-weight:560}
+[data-theme=light] .logo{background:var(--text)}
+[data-theme=light] .btn,[data-theme=light] .tab,[data-theme=light] .iconbtn,[data-theme=light] .seg,[data-theme=light] .player,[data-theme=light] .side,
+[data-theme=light] .chart,[data-theme=light] .row,[data-theme=light] .row>button,[data-theme=light] .frame,[data-theme=light] .metric,[data-theme=light] .badge,
+[data-theme=light] .node i,[data-theme=light] .pipedetail,[data-theme=light] details.acc,[data-theme=light] .card,[data-theme=light] .paper,[data-theme=light] .kpi,
+[data-theme=light] .issue,[data-theme=light] .code,[data-theme=light] dialog,[data-theme=light] .chapters li button,[data-theme=light] .paper .here,[data-theme=light] .gaps{border-radius:4px}
+[data-theme=light] .btn{border-color:var(--text);background:transparent}
+[data-theme=light] .btn.p{background:var(--text);border-color:var(--text);color:var(--bg)}
+[data-theme=light] .btn:hover{background:var(--accent);border-color:var(--accent);color:#fff;transform:none}
+[data-theme=light] .card:hover{transform:none;box-shadow:var(--shadow)}
+[data-theme=light] .code{background:#1b1814}
+[data-theme=light] .code pre{color:#f4f1ea}
+[data-theme=light] .eyebrow::before{display:none}
+[data-theme=light] .node[aria-selected=true] i{box-shadow:none}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:76px}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
@@ -79,10 +100,6 @@ h3{font-size:19px;line-height:1.3;margin:0 0 6px;font-weight:650;letter-spacing:
 .frame .live i{width:7px;height:7px;border-radius:50%;background:#ff5d5d;animation:pulse 1.6s infinite}
 @keyframes pulse{50%{opacity:.25}}
 .herocap{margin-top:12px;font-size:13.5px;color:var(--muted)}
-.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:56px}
-.stat{padding:18px 18px 16px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
-.stat b{display:block;font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
-.stat>span{font-size:13px;color:var(--muted)}
 /* level explorer */
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:28px}
 .tab{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--soft);cursor:pointer;min-width:150px;text-align:left;transition:border-color .2s,background .2s,transform .2s;font:inherit}
@@ -103,7 +120,25 @@ h3{font-size:19px;line-height:1.3;margin:0 0 6px;font-weight:650;letter-spacing:
 .seg button{border:0;background:transparent;color:var(--muted);padding:7px 10px;font:600 12.5px var(--sans);cursor:pointer}
 .seg button[aria-pressed=true]{background:var(--surface2);color:var(--text)}
 .ctrl .sp{margin-left:auto}
-.side{border:1px solid var(--line);border-radius:18px;background:var(--surface);display:flex;flex-direction:column;min-height:0;max-height:640px}
+.side{border:1px solid var(--line);border-radius:18px;background:var(--surface);display:flex;flex-direction:column;min-height:0;contain:size}
+.sensors{border-top:1px solid var(--line);padding:14px 16px 16px}
+.shead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.shead .lg{margin-left:auto;display:flex;gap:14px;font-size:12.5px;color:var(--muted)}
+.shead .lg i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:3px}
+.strip{display:grid;grid-template-columns:178px minmax(0,1fr);gap:12px;align-items:center;padding:5px 0;border-top:1px dashed var(--line)}
+.strip:first-of-type{border-top:0}
+.strip .lab b{display:block;font-size:13px;font-weight:600;color:var(--soft)}
+.strip .lab span{display:block;font:500 12.5px var(--mono);color:var(--muted);min-height:18px}
+.strip canvas{display:block;width:100%;height:46px;cursor:crosshair}
+.gaps{margin-top:22px;border:1px solid var(--line);border-radius:18px;background:var(--surface)}
+.gaps summary{list-style:none;cursor:pointer;padding:20px 22px;display:flex;gap:16px;align-items:center}
+.gaps summary::-webkit-details-marker{display:none}
+.gaps summary h3{margin:8px 0 2px}
+.gaps summary p{margin:0;font-size:14px;color:var(--muted)}
+.gaps .count{margin-left:auto;flex:none;min-width:34px;height:34px;padding:0 10px;border-radius:999px;display:grid;place-items:center;font:600 14px var(--mono);background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.gaps .chev{flex:none;width:22px;height:22px;color:var(--muted);transition:transform .25s}
+.gaps[open] .chev{transform:rotate(180deg)}
+.gaps .issues{margin:0;padding:0 18px 18px}
 .side header{padding:18px 18px 12px;border-bottom:1px solid var(--line)}
 .side header p{margin:6px 0 0;font-size:14px;color:var(--soft)}
 .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
@@ -229,8 +264,7 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
 .rv.in{opacity:1;transform:none}
 @media (max-width:980px){
   .hero{grid-template-columns:1fr;gap:34px;padding-top:40px}
-  .explorer{grid-template-columns:1fr}.side{max-height:460px}
-  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .explorer{grid-template-columns:1fr}.side{contain:none;max-height:460px}
   .grid3{grid-template-columns:repeat(2,minmax(0,1fr))}
   .pipe{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:22px}.pipe::before{display:none}
   .row>button{grid-template-columns:150px minmax(0,1fr) 56px 20px;gap:10px}
@@ -242,6 +276,7 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
   .tab{min-width:0;flex:1 1 140px}
   .row>button{grid-template-columns:1fr 54px 18px}.bararea{grid-column:1/-1;grid-row:2}
   .fail{grid-template-columns:1fr 80px 24px}
+  .strip{grid-template-columns:1fr}.shead .lg{margin-left:0}
   details.acc .in{padding-left:20px}
 }
 @media (prefers-reduced-motion:reduce){
@@ -253,7 +288,7 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
 <a class="skip" href="#content">Skip to content</a>
 <nav aria-label="Main"><div class="wrap">
   <a class="brand" href="#top"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M4 20V11l6-5 4 4"/><path d="M20 20v-7l-4-4"/><circle cx="14" cy="10" r="1.6" fill="#fff"/></svg></span>Dual-YAM digital twin</a>
-  <div class="links" id="links"><a href="#levels">Levels</a><a href="#how">How it works</a><a href="#results">Results</a><a href="#papers">Papers</a><a href="#dance">Dance</a><a href="#run">Run it</a></div>
+  <div class="links" id="links"><a href="#levels">Levels</a><a href="#dance">Dance</a><a href="#how">How it works</a><a href="#results">Results</a><a href="#papers">Papers</a><a href="#run">Run it</a></div>
   <button class="iconbtn" id="theme" type="button" aria-label="Switch between dark and light theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
   <a class="iconbtn" href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin" aria-label="Source code on GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg></a>
 </div></nav>
@@ -271,12 +306,6 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
       <div class="frame"><video src="videos/hero_flip.mp4" poster="videos/level2.jpg" autoplay muted loop playsinline preload="auto" aria-label="Level 2: one arm takes the top cup off the stack upside down and rolls it upright"></video><div class="live"><i></i>Level 2 · real time</div></div>
       <figcaption class="herocap">One arm grasps the top cup upside down while the other pins the stack. A single wrist roll brings the cup up upright, ready to pour. No hand-off, no set-down.</figcaption>
     </figure>
-  </div>
-  <div class="stats rv">
-    <div class="stat"><b><span data-count="5">0</span>/5</b><span>levels pass every referee check (nominal run)</span></div>
-    <div class="stat"><b><span data-count="1">0</span> arm</b><span>takes the cup from stack to coaster in Levels 2 and 3</span></div>
-    <div class="stat"><b><span data-count="120">0</span></b><span>randomized trials behind the results chart</span></div>
-    <div class="stat"><b><span data-count="0">0</span> cameras</b><span>contact is felt from joint-torque residuals</span></div>
   </div>
 </div>
 
@@ -296,12 +325,27 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
         <div class="seg sp" role="group" aria-label="Playback speed" id="speed"><button type="button" data-r="0.5">0.5×</button><button type="button" data-r="1" aria-pressed="true">1×</button><button type="button" data-r="2">2×</button><button type="button" data-r="4">4×</button></div>
         <button class="iconbtn" id="fs" type="button" aria-label="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       </div>
+      <div class="sensors" id="sensors">
+        <div class="shead"><span class="eyebrow">Sensor readings</span><span class="small muted">Recorded from this run, in step with the video. Click a trace to jump there.</span>
+          <span class="lg"><span><i style="background:var(--accent)"></i>cup arm</span><span><i style="background:var(--accent2)"></i>tap arm</span><span><i style="background:var(--ok);opacity:.5;height:8px"></i>valve open</span></span></div>
+        <div class="strip" data-k="w"><div class="lab"><b>Gripper width</b><span></span></div><canvas aria-label="Gripper width over the run"></canvas></div>
+        <div class="strip" data-k="f"><div class="lab"><b>Grip motor force</b><span></span></div><canvas aria-label="Grip motor force over the run"></canvas></div>
+        <div class="strip" data-k="c"><div class="lab"><b>Contact from joint torques</b><span></span></div><canvas aria-label="Contact force estimated from joint torques"></canvas></div>
+        <div class="strip" data-k="l"><div class="lab"><b>Lever angle</b><span></span></div><canvas aria-label="Lever angle and valve state"></canvas></div>
+      </div>
     </div>
     <aside class="side">
       <header><h3 id="lt"></h3><p id="ld"></p><div class="metrics" id="lm"></div></header>
       <ol class="chapters" id="ch" aria-label="Steps"></ol>
     </aside>
   </div>
+</div></section>
+
+<section id="dance"><div class="wrap">
+  <div class="rv"><span class="eyebrow">Dance mode</span>
+  <h2>The same arms, on the beat</h2>
+  <p class="lead">The server tracks tempo, beats, downbeats and loudness from a song and drives both arms through phase-locked moves (sway, pump, wave, circle, point, clap) scaled by the song's energy. The dots in the corner mark the tracked beat.</p></div>
+  <div class="grid3" id="danceGrid"></div>
 </div></section>
 
 <section id="how"><div class="wrap">
@@ -328,7 +372,7 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
           <li>The other arm pins the stack while the top cup is wiggled and pulled free. The pull force collapsing is the signal that the nested cups let go.</li>
           <li>The hand rises clear and rolls the wrist back to its normal position. The cup comes up upright and goes straight to the spout. It is never handed over or set down.</li>
           <li>A level hand-up grasp at the stack would put wrist joint 5 on its stop, so the grasp dips 8°. That leaves a 16° lean after the roll, which the carry to the spout takes out.</li>
-        </ul>
+</ul>
       </div>
     </details>
     <details class="acc rv">
@@ -368,7 +412,10 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
     <label class="toggle"><input type="checkbox" id="pvt" checked>previous run</label>
   </div>
   <div class="chart rv" id="chart"></div>
-  <div class="issues" id="issues"></div>
+  <details class="gaps rv" id="gaps">
+    <summary><div><span class="eyebrow">Gaps still remaining</span><h3>Why no level meets its target yet, and what has not been done</h3><p>Four failure causes from the randomized runs and two limits of the twin itself.</p></div><span class="count" aria-label="6 gaps">6</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+    <div class="issues" id="issues"></div>
+  </details>
 </div></section>
 
 <section id="papers"><div class="wrap">
@@ -400,16 +447,9 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
   </div>
 </div></section>
 
-<section id="dance"><div class="wrap">
-  <div class="rv"><span class="eyebrow">Dance mode</span>
-  <h2>The same arms, on the beat</h2>
-  <p class="lead">The server tracks tempo, beats, downbeats and loudness from a song and drives both arms through phase-locked moves (sway, pump, wave, circle, point, clap) scaled by the song's energy. The dots in the corner mark the tracked beat.</p></div>
-  <div class="grid3" id="danceGrid"></div>
-</div></section>
-
 <section id="run"><div class="wrap">
   <div class="rv"><span class="eyebrow">Run it</span>
-  <h2>The live dashboard</h2>
+<h2>The live dashboard</h2>
   <p class="lead">The interactive twin runs MuJoCo in a Python process: a 30–50 fps view with a view cube, a step timeline you can scrub back through, telemetry, a belief-vs-truth overlay, a Monte Carlo panel and Dance Mode.</p></div>
   <div class="code rv"><button class="copy" type="button" id="copy">Copy</button><pre id="cmd">git clone https://github.com/Shaurya-Srivastav/dual-yam-digital-twin
 cd dual-yam-digital-twin
@@ -459,15 +499,12 @@ let RESULTS=null;
 
 /* theme */
 const root=document.documentElement, saved=localStorage.getItem("theme");
-if(saved) root.dataset.theme=saved; else if(matchMedia("(prefers-color-scheme: light)").matches) root.dataset.theme="light";
-$("#theme").onclick=()=>{root.dataset.theme=root.dataset.theme==="dark"?"light":"dark";localStorage.setItem("theme",root.dataset.theme);};
+if(saved) root.dataset.theme=saved;
+$("#theme").onclick=()=>{root.dataset.theme=root.dataset.theme==="dark"?"light":"dark";localStorage.setItem("theme",root.dataset.theme);drawSensors();};
 
 /* reveal + counters */
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;e.target.classList.add("in");io.unobserve(e.target);
-  e.target.querySelectorAll("[data-count]").forEach(countUp);
   if(e.target.id==="chart") e.target.querySelectorAll(".val").forEach(v=>v.style.width=v.dataset.w);}),{threshold:.12});
-function countUp(el){const end=+el.dataset.count;if(reduce||!end){el.textContent=end;return;}const t0=performance.now();
-  const step=t=>{const k=Math.min((t-t0)/1100,1);el.textContent=Math.round(end*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(step);};requestAnimationFrame(step);}
 document.querySelectorAll(".rv").forEach(el=>io.observe(el));
 if(reduce){const h=$(".frame video");h.removeAttribute("autoplay");h.pause();h.controls=true;}
 
@@ -478,7 +515,7 @@ addEventListener("scroll",()=>{let id="";for(const s of secs){if(s.getBoundingCl
 
 /* level explorer */
 const pv=$("#pv"), tabs=$("#tabs"), cache={};
-let cur=null, chapters=[];
+let cur=null, chapters=[], TEL=null;
 LEVELS.forEach((L,i)=>{const b=document.createElement("button");b.className="tab";b.type="button";b.role="tab";b.id="tab"+L.n;
   b.setAttribute("aria-selected",i===1);b.setAttribute("aria-controls","pv");
   b.innerHTML=`<small>Level ${L.n}<span class="tr" data-l="${L.n}"></span></small><span>${L.name}</span>`;
@@ -492,7 +529,7 @@ async function select(n,play){
   pv.poster=`videos/level${n}.jpg`;pv.src=`videos/level${n}.mp4`;pv.playbackRate=+($("#speed [aria-pressed=true]").dataset.r);
   $("#lt").textContent=L.title;$("#ld").textContent=L.desc;
   const m=await getMeta(n); if(cur!==n) return;
-  chapters=m.chapters||[];
+  chapters=m.chapters||[];TEL=m.telemetry||null;drawSensors();
   const rr=RESULTS&&RESULTS.levels.find(x=>x.level===n);
   $("#lm").innerHTML=(m.ok!==undefined?`<div class="metric"><b>${m.coaster_offset_mm} mm</b><span>cup from coaster centre</span></div><div class="metric"><b>${m.flow_s} s</b><span>pour (7.0 ± 0.2)</span></div><div class="metric"><b>${rr?rr.rate+" %":Math.round(m.sim_time_s)+" s"}</b><span>${rr?"randomized pass rate":"run time"}</span></div>`:"");
   const ol=$("#ch");ol.innerHTML="";let g="";
@@ -521,6 +558,36 @@ $("#tl").onclick=e=>{const r=e.currentTarget.getBoundingClientRect();pv.currentT
 $("#tl").onkeydown=e=>{if(e.key==="ArrowRight")pv.currentTime+=5;if(e.key==="ArrowLeft")pv.currentTime-=5;};
 $("#speed").onclick=e=>{const b=e.target.closest("button");if(!b)return;$("#speed").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));pv.playbackRate=+b.dataset.r;};
 $("#fs").onclick=()=>{(pv.requestFullscreen||pv.webkitEnterFullscreen||(()=>{})).call(pv);};
+const STRIPS={
+ w:{keys:[["cup_w","--accent"],["tap_w","--accent2"]],lo:0,hi:80,fmt:v=>`cup ${v[0].toFixed(0)} · tap ${v[1].toFixed(0)} mm`},
+ f:{keys:[["cup_f","--accent"],["tap_f","--accent2"]],lo:0,hi:20,fmt:v=>`cup ${v[0].toFixed(1)} · tap ${v[1].toFixed(1)} N`},
+ c:{keys:[["contact","--bad"]],lo:0,hi:8,fmt:v=>`${v[0].toFixed(1)} N`},
+ l:{keys:[["lever","--text"]],lo:-5,hi:65,flow:true,fmt:(v,fl)=>`${v[0].toFixed(0)}°${fl?" · valve open":""}`},
+};
+const css=k=>getComputedStyle(root).getPropertyValue(k).trim();
+function drawSensors(){
+  const n=TEL?TEL.t.length:0, dur=pv.duration||(n?TEL.t[n-1]+2:1), now=pv.currentTime||0, dpr=devicePixelRatio||1;
+  const i=n?Math.max(0,Math.min(n-1,Math.round(now*10))):0;
+  document.querySelectorAll("#sensors .strip").forEach(st=>{
+    const S=STRIPS[st.dataset.k], cv=st.querySelector("canvas"), w=cv.clientWidth, h=cv.clientHeight;
+    if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
+    const g=cv.getContext("2d");g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);
+    g.fillStyle=css("--surface2");g.fillRect(0,0,w,h);
+    if(!n){st.querySelector(".lab span").textContent="";return;}
+    const X=t=>w*t/dur, Y=v=>h-3-(h-6)*(Math.min(Math.max(v,S.lo),S.hi)-S.lo)/(S.hi-S.lo);
+    if(S.flow){g.fillStyle=css("--ok");g.globalAlpha=.22;let a=-1;
+      for(let k=0;k<=n;k++){const on=k<n&&TEL.flow[k];if(on&&a<0)a=k;if(!on&&a>=0){g.fillRect(X(TEL.t[a]),0,X(TEL.t[k-1])-X(TEL.t[a])+1,h);a=-1;}}g.globalAlpha=1;}
+    S.keys.forEach(([k,c])=>{const v=TEL[k];g.strokeStyle=css(c);g.lineWidth=1.5;g.lineJoin="round";g.beginPath();
+      for(let j=0;j<n;j++){const x=X(TEL.t[j]),y=Y(v[j]);j?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();});
+    const px=X(now);g.fillStyle=css("--text");g.globalAlpha=.85;g.fillRect(px-0.75,0,1.5,h);g.globalAlpha=1;
+    st.querySelector(".lab span").textContent=S.fmt(S.keys.map(([k])=>TEL[k][i]),TEL.flow[i]);
+  });
+}
+let raf=0;const loop=()=>{drawSensors();raf=pv.paused?0:requestAnimationFrame(loop);};
+pv.addEventListener("play",()=>{if(!raf)raf=requestAnimationFrame(loop);});
+["seeked","loadedmetadata","pause"].forEach(ev=>pv.addEventListener(ev,drawSensors));
+document.querySelectorAll("#sensors canvas").forEach(cv=>cv.addEventListener("click",e=>{const r=cv.getBoundingClientRect();if(pv.duration)seekTo(pv.duration*(e.clientX-r.left)/r.width);}));
+new ResizeObserver(()=>drawSensors()).observe($("#sensors"));
 select(2,false);
 
 /* pipeline */
@@ -550,8 +617,7 @@ function chart(){const c=$("#chart");c.innerHTML="";
   if(cur) select(cur,false);}
 $("#pvt").onchange=e=>$("#chart").classList.toggle("nopv",!e.target.checked);
 fetch("data/results.json").then(r=>r.json()).then(d=>{RESULTS=d;chart();}).catch(()=>{$("#chart").innerHTML='<p class="muted small" style="padding:14px">Results could not be loaded.</p>';});
-$("#issues").innerHTML=ISSUES.map(i=>`<div class="issue ${i[0]==="w"?"w":""} rv"><h4>${i[1]}</h4><p>${i[2]}</p></div>`).join("");
-document.querySelectorAll("#issues .rv").forEach(el=>io.observe(el));
+$("#issues").innerHTML=ISSUES.map(i=>`<div class="issue ${i[0]==="w"?"w":""}"><h4>${i[1]}</h4><p>${i[2]}</p></div>`).join("");
 
 /* dance */
 const dg=$("#danceGrid");
