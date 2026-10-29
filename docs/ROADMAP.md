@@ -1,11 +1,13 @@
 # Roadmap: what is still open
 
-Ordered by what blocks the most.
+Ordered by what blocks the most. Rates are from [RESULTS.md](RESULTS.md).
 
-1. **Stack on the coaster spot (Levels 1-4 all start at the coaster).** Needs the tap arm's base at the measured solution (cup-frame (0.067, -0.480), no relative yaw). Tried: the lever lift then fails IK because the lever arc was tuned for the current base. Work: re-derive the lever grip frames for the new base, widen the lift arc's IK seeds, rerun the Level 1/4 Monte Carlo, then move the L2/L3 stack and put the L2 serve spot elsewhere.
-2. **Stack contact in Levels 2/3.** Arm links and housing brush the remaining stack on the way to the spout (referee: `arm_stack`). With the stack on the coaster spot this should disappear; until then `Plant.stack_is_obstacle = True` makes the planner refuse such paths (no route exists in the current layout).
-3. **Randomized success rate.** 79 / 38 / 21 / 25 / 33 % against targets 98 / 98 / 95 / 95 / 90 %. Known causes: top cup slipping in the pull, some stack heights without a reachable side grasp, the held cup bumping the valve, the wide coaster dish not centring the cup.
-4. **Level 5 speed and contacts.** Information-gain pecking (next peck chosen by expected entropy reduction on the cup-position belief), pecks planned so the housing never reaches a feasible cup position.
-5. **Calibration from the station photos.** Tap base spacing, coaster dish radius, spigot geometry are inferred, not measured.
-6. **Hardware.** Run `python -m sim_station.sim_robot --hardware` at half speed and fit friction and gravity factors against the twin's tracking error.
-7. **Dance.** Tune the lead (`dance.LEAD_S`) against real speakers; add more moves per style.
+1. **Coaster centring (Levels 1-4).** The coaster is jittered up to 8 mm in randomized trials and the skills only know its nominal spot. The dish leaves about 2 cm of slack around the cup base (needed by the real replay), so it does not centre the cup. Next: localise the coaster by touch before the serve (a peck on its rim, not a slide of the held cup, which was tried and made it worse), or measure the real dish and tighten it.
+2. **Level 4 dispenser creep and lever lift.** Parking the handle pushes the dispenser past 2 mm on 7 of 24 draws; a stiffer tape model fixed that but broke the Level 1 close timing. The lever lift's first IK step jumps 0.13 rad on 3 of 24. Next: a gentler park push, and a seeded first IK step for the lift.
+3. **Level 3 pin reachability.** No collision-free pin approach for some stack heights (5 of 24). Next: more pin approach azimuths and heights.
+4. **Level 5 scan.** A peck into the open mouth reads as empty mat. Next: model the mouth in the scan's candidate update without dropping hits elsewhere (the first attempt lowered the rate).
+5. **Grasp retries.** 1-2 of 24 per level close on nothing or stall on a 61-63 mm chord after nine attempts.
+6. **Not separate implementations yet:** torque actuators (the arms are position actuators with the MIT law in the command), bimanual zone locks, a `GripperForceLimiter` class, a particle-filter or expected-entropy Level 5 belief.
+7. **Calibration from the station photos.** The photos are not in the tree; tap base spacing, dish radius and spigot geometry are inferred, not measured.
+8. **Hardware.** Run `python -m sim_station.sim_robot --hardware` at half speed and fit friction and gravity factors against the twin's tracking error.
+9. **Dance.** Tune the lead (`dance.LEAD_S`) against real speakers; add more moves per style. Take On Me is tracked at 84 BPM and danced on every beat (not half time).

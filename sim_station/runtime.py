@@ -191,6 +191,8 @@ class Ctx:
             hits = [h for h in hits if not self._benign(h) and tuple(sorted(h)) not in leaving]
             if hits:
                 raise PlanError(f"{arm} arm path collides at {k * traj.dt:.2f}s: {hits[0][0]} / {hits[0][1]}")
+            if arm == "cup" and self.bel.cup_in_hand and self.plant.held_cup_hits_dispenser(traj.q[k], w):
+                raise PlanError(f"the held cup would bump the valve or the tank at {k * traj.dt:.2f}s")
 
     @staticmethod
     def _benign(pair: Tuple[str, str]) -> bool:

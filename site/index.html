@@ -48,13 +48,42 @@ footer{max-width:1120px;margin:80px auto 0;padding:24px 20px 60px;border-top:1px
 </style>
 </head>
 <body>
-<nav><div><b>Dual-YAM digital twin</b><a href="#levels">Levels</a><a href="#dance">Dance</a><a href="#how">How it works</a><a href="#status">Honest status</a><a href="#proof">Proofs</a><a href="#run">Run it</a><a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">GitHub</a></div></nav>
+<nav><div><b>Dual-YAM digital twin</b><a href="#papers">Papers</a><a href="#levels">Levels</a><a href="#dance">Dance</a><a href="#how">How it works</a><a href="#status">Honest status</a><a href="#proof">Proofs</a><a href="#run">Run it</a><a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">GitHub</a></div></nav>
 
 <section style="padding-top:64px">
   <h1>Two arms. One dry dispenser.<br><span style="color:var(--acc)">No cameras.</span></h1>
   <p class="lead">A MuJoCo digital twin of a two-arm (I2RT YAM) water-cup station. One arm brings a paper or plastic cup under the spout, the other lifts a 360° lever for a 7-second pour, and the cup is served into a coaster. Every skill works from what real motors report: joint position, velocity, torque and gripper width.</p>
   <a class="btn p" href="#levels">Watch the five levels</a><a class="btn" href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">Source code</a><a class="btn" href="#run">Run the live dashboard</a>
   <div class="chips"><span class="chip">MuJoCo 3</span><span class="chip">MIT-mode PD + gravity feed-forward</span><span class="chip">torque-residual contact sensing</span><span class="chip">mink IK</span><span class="chip">set-membership cup localisation</span><span class="chip">beat tracking</span><span class="chip">Monte Carlo referee</span></div>
+</section>
+
+<section id="papers" style="padding-top:48px">
+  <h2>The papers this is built on</h2>
+  <p class="lead" style="font-size:17px">The skills are blind on purpose. These are the papers that say how to localise and manipulate from touch and joint torque alone, and what this twin actually took from each one. Full notes are in <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin/blob/main/docs/RESEARCH.md">docs/RESEARCH.md</a>.</p>
+  <div class="cols">
+    <div class="panel"><h3>Finding a cup by touch</h3>
+      <ul class="small">
+        <li><a href="https://doi.org/10.1109/tro.2017.2707092">Memory Unscented Particle Filter for 6-DOF Tactile Localization</a> — Vezzani, Pattacini, Battistelli, Chisci, Natale, IEEE Transactions on Robotics, 2017. <a href="https://arxiv.org/abs/1607.02757">arXiv:1607.02757</a>. A particle belief over object pose, updated from contact.</li>
+        <li><a href="https://arxiv.org/abs/2205.04697">An Empirical Evaluation of Various Information Gain Criteria for Active Tactile Action Selection for Pose Estimation</a> — Murali, Dahiya, Kaboli, 2022. <a href="https://ar5iv.labs.arxiv.org/html/2205.04697">HTML</a>. Pick the next touch by how much it should shrink the belief. They report under 1 cm after 15 touches.</li>
+        <li><a href="https://doi.org/10.1109/icra57385.2026.11697596">Touch-Based Object Localisation with Spatially-Aware Belief Entropy Estimation</a> — Brudermüller, Jankowski, Toussaint, Hawes, ICRA 2026. Touch-only global localisation, then a grasp.</li>
+      </ul>
+      <p class="small muted">What runs here: every peck rules out cup centres the arm and cup models cannot explain (the hard-likelihood, set-membership version of that belief). The next peck is the one that splits the centres still in play about in half. It is not a particle filter, and it does not compute expected entropy over a full pose distribution.</p>
+    </div>
+    <div class="panel"><h3>Finding a handle without moving it</h3>
+      <ul class="small">
+        <li><a href="https://arxiv.org/abs/2509.12969">Underactuated Robotic Hand with Grasp State Estimation Using Tendon-Based Proprioception</a> — Lee, Park, Cho, 2025. <a href="https://arxiv.org/html/2509.12969v2">HTML</a>. Pause the first finger that touches, so the object is not pushed before the grasp is set.</li>
+        <li><a href="https://tlips.be/revisiting-proprioception-for-articulated-manipulation/">Revisiting Proprioceptive Sensing for Articulated Object Manipulation</a> — Lips and wyffels, ICRA 2023 workshop. Estimate a joint from the gripper pose while in contact. Slip between gripper and handle is the failure they name.</li>
+        <li><a href="https://kormushev.com/papers/Jamali_OCEANS-2013.pdf">Contact State Estimation using Machine Learning</a> — Jamali, Kormushev, Caldwell, OCEANS 2013. <a href="https://doi.org/10.23919/oceans.2013.6740992">DOI</a>. Classify no contact, on-axis, and off-centre contact on a T-bar valve from force and torque.</li>
+      </ul>
+      <p class="small muted">What runs here: the fingertip stops at about 0.9 N, under the roughly 1.5 N it takes to turn the swivel, then the handle yaw is solved from the known hand and handle shapes. The threshold is still below a learned contact classifier.</p>
+    </div>
+    <div class="panel"><h3>Turning a cup over with one arm</h3>
+      <ul class="small">
+        <li><a href="https://arxiv.org/abs/2210.05068">In-Hand Gravitational Pivoting Using Tactile Sensing</a> — Toskov, Newbury, Mukadam, Kulić, Cosgun, CoRL 2022. <a href="https://ar5iv.labs.arxiv.org/html/2210.05068">HTML</a>. Let a held object rotate in a parallel gripper under gravity, tracked from touch.</li>
+      </ul>
+      <p class="small muted">What runs here is not that method. The wrist is turned to the flip attitude before the fingers close, the cup is lifted clear of the stack, and one Cartesian roll turns it upright. The attitude came from an inverse-kinematics search, not from the paper. Gravitational pivoting is the alternative that was not used: it needs slip inside the fingers, and this grasp is meant to hold.</p>
+    </div>
+  </div>
 </section>
 
 <section id="levels">
@@ -65,7 +94,7 @@ footer{max-width:1120px;margin:80px auto 0;padding:24px 20px 60px;border-top:1px
 
 <section id="dance">
   <h2>Dance mode</h2>
-  <p class="lead" style="font-size:17px">The browser plays a song and reports its clock; the server tracks the beats of the audio itself (tempo, beats, downbeats, loudness) and poses both arms from phase-locked moves: sway, pump, wave, circle, point and clap, sized by the song's energy. These clips are <b>silent</b> because the recordings are copyrighted; the dots show the tracked beat. Run the dashboard locally with your own files to hear it.</p>
+  <p class="lead" style="font-size:17px">The live dashboard plays the audio file and reports its clock. The server tracks tempo, beats, downbeats and loudness from that audio and poses both arms from phase-locked moves: sway, pump, wave, circle, point and clap, sized by the song's energy. The clips here carry no audio track: owning a copy of a song does not give the right to republish it, so the recordings are not in the public videos, the repo or this site. To hear them, open a clip and press <b>Play my own copy</b>: pick the song file on your computer and the page plays it in sync with the arms, without uploading it. The dots are the tracked beat. The local dashboard does the same from files on that machine when you press Start dance.</p>
   <div class="grid" id="danceGrid"></div>
 </section>
 
@@ -80,12 +109,12 @@ footer{max-width:1120px;margin:80px auto 0;padding:24px 20px 60px;border-top:1px
     <div><b>6 · Referee</b>Only the referee reads true poses: upright, centred, 7.0 s pour with the cup under the outlet, dispenser still, no collisions, arms at rest.</div>
   </div>
   <div class="cols">
-    <div class="panel"><h3>Finding the lever without moving it</h3><p class="small muted">Research on contact-pause grasping and proprioceptive articulated-object estimation says: set the threshold above noise but below breakaway.</p>
+    <div class="panel"><h3>Finding the lever without moving it</h3><p class="small muted">From <a href="https://arxiv.org/abs/2509.12969">contact-pause grasping</a> and <a href="https://tlips.be/revisiting-proprioception-for-articulated-manipulation/">proprioceptive articulated-object estimation</a>: set the threshold above noise but below breakaway. <a href="https://kormushev.com/papers/Jamali_OCEANS-2013.pdf">Jamali, Kormushev and Caldwell</a> classify T-bar contact the same way, from force rather than vision.</p>
       <ul class="small"><li>A fingertip circles the valve and stops at about 0.9 N; the swivel needs about 1.5 N to turn.</li><li>The handle yaw is solved from the known hand and handle shapes (oriented-box intersection), not a fixed offset.</li><li>The finger pushes it to about 45°, backs off and touches again to confirm; if it is lost it searches again.</li><li>The swivel turns a full 360°; tested from −170° to 175°.</li></ul></div>
-    <div class="panel"><h3>Finding the cup without cameras</h3><p class="small muted">Touch-only localisation keeps a belief and updates it from contact and no-contact readings.</p>
-      <ul class="small"><li>Pecks from above on a coarse grid until something stands up.</li><li>Every peck outcome rules out cup positions that would contradict it, using the arm and cup models: a set-membership fit, 3–6 mm error.</li><li>Not yet: choosing each next peck by expected information gain.</li></ul></div>
-    <div class="panel"><h3>The one-arm flip</h3><p class="small muted">With the hand 60° off the arm's line and tilted 20° down, the wrist is aligned so joint 6 alone rolls about 180° with the hand fixed.</p>
-      <ul class="small"><li>The cup is held by its base band with its axis perpendicular to the approach axis, so one wrist roll turns it over.</li><li>Found by an IK search over attitudes; pitching in place is not reachable.</li><li>The cup is then lowered until its base edge touches the mat and released.</li></ul></div>
+    <div class="panel"><h3>Finding the cup without cameras</h3><p class="small muted"><a href="https://doi.org/10.1109/tro.2017.2707092">Vezzani et al.</a> keep a belief and update it from contact. <a href="https://arxiv.org/abs/2205.04697">Murali, Dahiya and Kaboli</a> and <a href="https://doi.org/10.1109/icra57385.2026.11697596">Brudermüller et al.</a> choose the next touch by information gain.</p>
+      <ul class="small"><li>Pecks from above on a coarse grid until something stands up. The approach is nearly vertical, and a miss stops at 8 cm, so the wrist housing never drops onto the cup.</li><li>Every peck rules out centres the arm and cup models cannot explain. The next peck splits the centres still in play about in half.</li><li>The fit is set-membership. It is not the particle filter in the 2017 paper, and it does not estimate expected entropy.</li></ul></div>
+    <div class="panel"><h3>The one-arm flip</h3><p class="small muted">The wrist is turned the other way, about −65° off the arm's line and 8° down, before the fingers touch the cup. <a href="https://arxiv.org/abs/2210.05068">Gravitational pivoting</a> is the paper alternative; this roll does not use it.</p>
+      <ul class="small"><li>The cup is held by its base band. Because the hand is already in the flip attitude, the lift itself rolls the cup over.</li><li>The roll is a Cartesian path: rise clear of the stack, slide 9 cm off it, roll 170° (the last 10° is past the wrist), then lower. One arm only.</li><li>The wrist housing cannot follow the base the last few centimetres, so the cup is released a few centimetres up and drops onto its base.</li></ul></div>
     <div class="panel"><h3>Side grasp that does not push the cup</h3><ul class="small"><li>Slides in with open jaws and complies sideways to contact force so the funnel pads centre the hand.</li><li>On closing, the stall width gives the chord 2·√(r²−s²): how far off the cup's axis the hand is, so depth is servoed from touch alone.</li><li>Force caps per grip; no weld, no snap.</li></ul></div>
   </div>
 </section>
@@ -96,25 +125,29 @@ footer{max-width:1120px;margin:80px auto 0;padding:24px 20px 60px;border-top:1px
   <div class="cols">
     <div class="panel"><h3>Randomized success (24 trials per level)</h3>
       <table><tr><th>Level</th><th>Passed</th><th>Target</th><th></th></tr>
+        <tr><td colspan="4" class="small muted">Nominal runs pass; randomized ones do not reach target. Failure causes are listed below.</td></tr>
         <tr><td>1 Upright cup</td><td class="b">79 %</td><td>98 %</td><td><div class="bar"><i style="width:79%;background:var(--warn)"></i></div></td></tr>
-        <tr><td>2 Stack, height known</td><td class="b">38 %</td><td>98 %</td><td><div class="bar"><i style="width:38%;background:var(--bad)"></i></div></td></tr>
-        <tr><td>3 Stack, height unknown</td><td class="b">21 %</td><td>95 %</td><td><div class="bar"><i style="width:21%;background:var(--bad)"></i></div></td></tr>
-        <tr><td>4 Lever angle unknown</td><td class="b">25 %</td><td>95 %</td><td><div class="bar"><i style="width:25%;background:var(--bad)"></i></div></td></tr>
-        <tr><td>5 Cup anywhere</td><td class="b">33 %</td><td>90 %</td><td><div class="bar"><i style="width:33%;background:var(--bad)"></i></div></td></tr></table>
-      <p class="small muted">Measured before the last Level 5 and coaster changes; not rerun since.</p></div>
+        <tr><td>2 Stack, height known</td><td class="b">42 %</td><td>98 %</td><td><div class="bar"><i style="width:42%;background:var(--bad)"></i></div></td></tr>
+        <tr><td>3 Stack, height unknown (3–11 cups)</td><td class="b">42 %</td><td>95 %</td><td><div class="bar"><i style="width:42%;background:var(--bad)"></i></div></td></tr>
+        <tr><td>4 Lever angle unknown</td><td class="b">21 %</td><td>95 %</td><td><div class="bar"><i style="width:21%;background:var(--bad)"></i></div></td></tr>
+        <tr><td>5 Cup anywhere</td><td class="b">12 %</td><td>90 %</td><td><div class="bar"><i style="width:12%;background:var(--bad)"></i></div></td></tr></table>
+      <p class="small muted">Measured on the code that is deployed (Oct 28, 2026). Every level misses its target.</p></div>
     <div class="panel"><h3>Nominal runs (no randomization)</h3>
       <table><tr><th>Level</th><th>Result</th></tr>
-        <tr><td>1</td><td><span class="tag ok">passes every referee check</span></td></tr><tr><td>4</td><td><span class="tag ok">passes every referee check</span></td></tr>
-        <tr><td>2, 3</td><td><span class="tag warn">pour and serve complete; the forearm or housing brushes the remaining stack</span></td></tr>
-        <tr><td>5</td><td><span class="tag warn">completes; the housing touches the target cup while pecking</span></td></tr></table>
-      <p class="small muted">Referee rule: no arm link or housing may touch a cup or stack; only fingertips may.</p></div>
+        <tr><td>1 to 5</td><td><span class="tag ok">pass every referee check</span> cup 3–13 mm from the coaster centre, flow 6.94–6.96 s</td></tr>
+        <tr><td>2, 3</td><td><span class="tag ok">stack never touched by an arm link or housing</span> the stack now stands on the coaster spot, as on the real station</td></tr>
+        <tr><td>Replay</td><td><span class="tag ok">real Level 1 waypoints</span> 0.9 mm from the outlet axis, 8.9 mm from the coaster centre</td></tr></table>
+      <p class="small muted">Referee rule: no arm link or housing may touch a cup or stack; only fingertips may. The nominal runs are the ones in the videos above.</p></div>
   </div>
   <div class="panel" style="margin-top:18px"><h3>What is still open, and why</h3>
     <ul>
-      <li><b class="b">Stack contact in Levels 2 and 3.</b> The remaining stack sits 11 cm from the line between the cup arm's base and the spout, so every carry to the spout brushes it. Making it a hard planning obstacle leaves no route. Moving the stack to the coaster spot needs the tap arm's base moved to the measured solution; I tried it and the lever lift then fails inverse kinematics, because the lever routine was tuned for the current base. Fix: re-tune the lever arc for the new base.</li>
-      <li><b class="b">Randomized success below target.</b> Top cup slips during the pull on some draws; some stack heights have no reachable side grasp; the held cup can bump the valve; the coaster dish is wide enough for the real 2 cm slack so it no longer centres the cup.</li>
-      <li><b class="w">Level 5 speed and housing contacts.</b> About 100–150 s of simulated time. The tilted hand's housing can touch the target cup while pecking.</li>
-      <li><b class="w">Dimensions not measured on the real station:</b> tap-arm base position, coaster dish radius, spigot geometry. The station photos were not used to calibrate this round.</li>
+      <li><b class="b">Cup more than 15 mm from the coaster centre</b> (the most common failure in Levels 2 and 3, 13 of 48 trials). The coaster is placed up to 8 mm off its nominal spot in randomized trials and the skills are not told where. The dish has about 2 cm of slack around the cup base, which the real replay needs, so it does not centre the cup. A four-sided touch of the dish wall with the held cup was tried and made it worse; it is not in this build.</li>
+      <li><b class="b">Level 4: dispenser pushed more than 2 mm</b> (7 of 24) while the fingertip parks the handle, and the lever lift's first IK step jumps 0.13 rad on some draws (3 of 24). Making the taped dispenser stiffer fixed the creep but broke the lever close timing in Level 1, so it was taken out.</li>
+      <li><b class="b">Level 3: no collision-free pin approach</b> for some stack heights (5 of 24).</li>
+      <li><b class="b">Level 5:</b> a grid peck that lands inside the cup's open mouth reads as "no cup here", so the scan can miss the cup or fit it in the wrong place and the grasp closes on nothing. That is 8 of 24 failures. The other Level 5 failures are the two arms touching (3), the hand brushing the parked stack (3) and the grasp closing on nothing (3). An offset second pass and model-based pruning were tried and lowered the rate (8 %); they are not in this build.</li>
+      <li><b class="w">Grasp failures in every level</b> (1–2 of 24): the jaws stall on a 61–63 mm chord or close on nothing after nine attempts.</li>
+      <li><b class="w">Not separate implementations:</b> the arms are MuJoCo position actuators with the MIT law packed into the command, not torque actuators; there are no bimanual zone locks beyond the planner's collision checks; there is no <code>GripperForceLimiter</code> class (force caps are inside the grip routine). The Level 5 fit is set-membership with a split-the-candidates rule, not a particle filter or expected entropy.</li>
+      <li><b class="w">Dimensions not measured on the real station:</b> the setup photos are not in the tree and were not used to override the forward-kinematics millimetres. Tap-arm base, dish radius and spigot geometry are inferred.</li>
       <li><b class="w">No hardware run.</b> <code>SimYam</code> implements the i2rt <code>Robot</code> protocol and the same driver can target <code>get_yam_robot</code>, but it is untested on the arms.</li>
     </ul></div>
 </section>
@@ -142,32 +175,44 @@ python -m sim_station.selftest                                      # all levels
 
 <footer>Dual-YAM digital twin · MIT licence · built with MuJoCo and the i2rt SDK · <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">source</a> · <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin/blob/main/docs/RESULTS.md">full results</a> · <a href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin/blob/main/docs/RESEARCH.md">research notes</a></footer>
 
-<dialog id="dlg"><video id="dv" controls playsinline></video><div class="cap"><button id="dx">Close</button><h3 id="dt"></h3><div class="muted small" id="dd"></div></div></dialog>
+<dialog id="dlg"><video id="dv" controls playsinline></video><div class="cap"><button id="dx">Close</button><h3 id="dt"></h3><div class="muted small" id="dd"></div>
+  <div id="own" class="small" style="display:none;margin-top:10px">Have the song? <label class="btn" style="cursor:pointer;padding:5px 12px">Play my own copy<input id="ownf" type="file" accept="audio/*" hidden></label> <span class="muted">The file stays on your computer: it plays in this page in sync with the video and is never uploaded. This site does not host the songs.</span></div>
+  <audio id="oa" preload="auto"></audio></div></dialog>
 
 <script>
 const LEVELS = [
  ["level1","Level 1 · Upright cup in the coaster","Cup out of the coaster, under the spout, lever lifted for 7 s, back into the coaster.","ok","passes every check"],
- ["level2","Level 2 · Nested stack, height known","Pin the stack with the tap arm, wiggle the top cup free, flip it with one wrist roll, set it down, serve.","warn","completes; brushes the stack"],
- ["level3","Level 3 · Nested stack, height unknown","Peck down on the stack to count the cups, then as Level 2.","warn","completes; brushes the stack"],
- ["level4","Level 4 · Lever angle unknown","Feel for the handle, park it, touch it again to confirm, then pour.","ok","passes every check"],
- ["level5","Level 5 · Cup anywhere on the mat","Coarse peck grid, then fit where the cup must stand from every peck.","warn","completes; housing touches the cup"],
+ ["level2","Level 2 · Nested stack, height known","Stack on the coaster. Pin it with the tap arm, turn the wrist into the flip attitude before grasping, wiggle the top cup free, roll it upright, set it down, serve.","ok","nominal run passes every check, stack untouched"],
+ ["level3","Level 3 · Nested stack, height unknown","Peck down on the stack to count the cups, then as Level 2.","ok","nominal run passes every check, stack untouched"],
+ ["level4","Level 4 · Lever angle unknown","Feel for the handle, park it, touch it again to confirm, then pour.","ok","nominal run passes every check"],
+ ["level5","Level 5 · Cup anywhere on the mat","Coarse peck grid, then fit where the cup must stand from every peck.","ok","nominal run passes every check"],
 ];
 const DANCE = [
  ["dance_rick","Never Gonna Give You Up","Rick Astley · 113 BPM tracked","sway, pump, wave, clap"],
- ["dance_aha","Take On Me","a-ha · 84 BPM tracked (half-time feel)","wave, circle, sway"],
+ ["dance_aha","Take On Me","a-ha · 84 BPM tracked, danced on every beat","wave, circle, sway"],
  ["dance_beegees","Stayin' Alive","Bee Gees · 103 BPM tracked","disco point, pump, clap"],
 ];
 function card(grid, id, title, desc, tag, tagText){
   const el=document.createElement("div"); el.className="card";
   el.innerHTML=`<div class="vid"><video muted loop playsinline preload="metadata" src="videos/${id}.mp4#t=0.8"></video><div class="play"><span>▶</span></div></div><div class="body"><h3>${title}</h3><div class="small muted">${desc}</div>${tag?`<div style="margin-top:8px"><span class="tag ${tag}">${tagText}</span></div>`:""}</div>`;
   const v=el.querySelector("video"); el.querySelector(".vid").onmouseenter=()=>v.play().catch(()=>{}); el.querySelector(".vid").onmouseleave=()=>{v.pause();};
-  el.querySelector(".vid").onclick=()=>{const d=document.getElementById("dlg"),dv=document.getElementById("dv");dv.src=`videos/${id}.mp4`;document.getElementById("dt").textContent=title;document.getElementById("dd").textContent=desc;d.showModal();dv.play().catch(()=>{});};
+  el.querySelector(".vid").onclick=()=>{const d=document.getElementById("dlg"),dv=document.getElementById("dv");dv.src=`videos/${id}.mp4`;document.getElementById("dt").textContent=title;document.getElementById("dd").textContent=desc;document.getElementById("own").style.display=id.startsWith("dance_")?"block":"none";d.showModal();dv.play().catch(()=>{});};
   grid.appendChild(el);
 }
 LEVELS.forEach(l=>card(document.getElementById("levelGrid"),l[0],l[1],l[2],l[3],l[4]));
 DANCE.forEach(d=>card(document.getElementById("danceGrid"),d[0],d[1],d[2]+" · "+d[3],"",""));
 const dlg=document.getElementById("dlg"),dv=document.getElementById("dv");
-document.getElementById("dx").onclick=()=>dlg.close(); dlg.addEventListener("close",()=>{dv.pause();dv.removeAttribute("src");}); dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close();});
+document.getElementById("dx").onclick=()=>dlg.close(); dlg.addEventListener("close",()=>{dv.pause();dv.removeAttribute("src");oa.pause();}); dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close();});
+// Dance clips start 30 s into the song after a 4 s rise into the ready pose (tools/make_videos.py).
+const oa=document.getElementById("oa"), SONG_START=30, RISE=4;
+const songT=()=>SONG_START+Math.max(dv.currentTime-RISE,0);
+function syncOwn(){ if(!oa.src) return; const inRise=dv.currentTime<RISE;
+  if(dv.paused||inRise){ oa.pause(); if(inRise) oa.currentTime=SONG_START; return; }
+  if(Math.abs(oa.currentTime-songT())>0.08) oa.currentTime=songT(); if(oa.paused) oa.play().catch(()=>{}); }
+document.getElementById("ownf").onchange=e=>{const f=e.target.files[0]; if(!f) return; if(oa.src) URL.revokeObjectURL(oa.src);
+  oa.src=URL.createObjectURL(f); dv.muted=true; dv.currentTime=0; dv.play().catch(()=>{});};
+["play","pause","seeked","timeupdate","ratechange"].forEach(ev=>dv.addEventListener(ev,()=>{oa.playbackRate=dv.playbackRate; syncOwn();}));
+dv.addEventListener("loadstart",()=>{oa.pause(); oa.removeAttribute("src"); document.getElementById("ownf").value="";});
 </script>
 </body>
 </html>

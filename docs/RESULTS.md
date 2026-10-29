@@ -4,21 +4,31 @@
 
 **IK vs the 12 real waypoints:** all reproduced within 0.4 mm and 0.01°.
 
-**Nominal run of each level** (`python -m sim_station.selftest`, no randomization): Levels 1 and 4 pass the full referee; Levels 2 and 3 finish the pour and the serve (flow 6.98 s, cup 11-12 mm from centre) but the housing or forearm brushes the remaining stack; Level 5 finishes but the hand housing touches the target cup while pecking.
+**Nominal run of each level** (`python -m sim_station.selftest`, no randomization): all five pass the full referee.
 
-**Monte Carlo, 24 randomized trials per level** (positions ±1 cm, friction/mass ±25-30 %, gains ±10 %, base ±2 mm / 0.5°, noise, 2-5 tick delay), before the last fixes to Level 5:
+| Level | Cup from coaster centre | Flow | Wall time |
+|---|---|---|---|
+| 1 | 4 mm | 6.96 s | 12 s |
+| 2 | 12 mm | 6.95 s | 58 s |
+| 3 | 11 mm | 6.94 s | 63 s |
+| 4 | 3 mm | 6.95 s | 13 s |
+| 5 | 13 mm | 6.96 s | 22 s |
 
-| Level | Pass | Target |
-|---|---|---|
-| 1 | 79 % | 98 % |
-| 2 | 38 % | 98 % |
-| 3 | 21 % | 95 % |
-| 4 | 25 % | 95 % |
-| 5 | 33 % | 90 % |
+In Levels 2 and 3 the stack stands on the coaster spot (as on the real station) and the referee's `stack_never_touched` and `arm_stack` checks pass.
 
-**Known problems.**
-- The remaining stack sits 11 cm from the line between the cup arm's base and the spout, so any carry to the spout brushes it. With the stack as a planning obstacle no route exists (`Plant.stack_is_obstacle`). The real layout puts the stack at the coaster spot with the tap base nearer to the cup arm (solution 1 in the layout notes); adopting it should clear the corridor but needs the tap base measured.
-- Top cup slips during the pull on some randomized draws; some stack heights have no reachable side grasp; the held cup can bump the valve; the dish no longer centres the cup.
-- Level 5 takes about 100 s of simulated time.
+**Monte Carlo, 24 randomized trials per level** (positions ±1 cm, coaster ±8 mm unknown to the skills, friction/mass ±25-30 %, gains ±10 %, base ±2 mm / 0.5°, noise, 2-5 tick delay, every fourth trial plastic, Level 3 stacks of 3 to 11 cups), on the committed code:
+
+| Level | Pass | Target | Main failures |
+|---|---|---|---|
+| 1 | 79 % | 98 % | cup >15 mm from centre (2), grasp (2), flow (1) |
+| 2 | 42 % | 98 % | cup >15 mm from centre (9), collisions (2), cup not upright (2) |
+| 3 | 42 % | 95 % | no pin approach (5), cup >15 mm (4), cup not upright (2) |
+| 4 | 21 % | 95 % | dispenser moved >2 mm (7), flow (4), cup >15 mm (3), lever-lift IK jump (3) |
+| 5 | 12 % | 90 % | scan found nothing (8), arms touched (3), grasp closed on nothing (3), parked stack touched (3), cup >15 mm (2) |
+
+**Tried and taken out because they measured worse:**
+- Feeling the dish wall on four sides with the held cup before release (cup ended 19-24 mm off).
+- A stiffer taped dispenser (fixed the Level 4 creep, but the Level 1 lever then stayed open 25 s).
+- An offset second Level 5 scan pass and model-based candidate pruning (Level 5 fell to 8 %).
 
 **Render:** 44 fps delivered at a 1400×900 viewport while simulating.

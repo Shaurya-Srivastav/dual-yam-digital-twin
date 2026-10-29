@@ -31,12 +31,13 @@ MAT_HALF_SIZE = np.array([0.3048, 0.4572, 0.0015])        # 24 in (x) by 36 in (
 CUP_MOUNT = np.array([0.0600, 0.2500, 0.0000])   # YAM base plate sits on the table plane (base mesh min z = 0)
 CUP_YAW = 0.0
 
-# The tap arm base is solved from the Pi's rim-grab pose. The cup arm's side_place
-# pose puts the sideways cup's rim top at cup-frame (0.4278, -0.3094); the tap arm's
-# rim_grab TCP in the tap frame is (0.4279, 0.2972). Subtracting gives a pure
-# translation of (-0.0001, -0.6066) with zero yaw. That is the official i2rt dual-arm
-# station spacing (0.61 m), so both bases sit on one rail at x = 0.06.
-TAP_BASE_OFFSET_IN_CUP_FRAME = np.array([-0.0001, -0.6066])
+# Tap-arm base. The station photos (overhead of the rail, both wrists on one extrusion,
+# 24x36 inch gridded mat) show the bases closer together than the official 0.61 m
+# i2rt dual-arm jig. The mount that reaches a stack standing in the coaster, with no
+# relative yaw, is the stack-pin solution: +67 mm in x and -480 mm in y in the cup
+# frame. The rim-grab subtraction (-0.1 mm, -606.6 mm) is that other jig; its lever
+# arc reaches, but the tap hand cannot pin a stack at the coaster.
+TAP_BASE_OFFSET_IN_CUP_FRAME = np.array([0.067, -0.480])
 TAP_MOUNT = np.array(
     [CUP_MOUNT[0] + TAP_BASE_OFFSET_IN_CUP_FRAME[0], CUP_MOUNT[1] + TAP_BASE_OFFSET_IN_CUP_FRAME[1], CUP_MOUNT[2]]
 )
@@ -46,10 +47,11 @@ MOUNTS = {"cup": (CUP_MOUNT, CUP_YAW), "tap": (TAP_MOUNT, TAP_YAW)}
 
 
 def solve_tap_base_candidates() -> Dict[str, Tuple[np.ndarray, float]]:
-    """The two stack-pin-pair solutions that were considered and rejected.
+    """Mounts that were on the table. The running one is `stack_reach`.
 
-    The pin pose was a retreat pose (the tap arm backed 14.6 cm off the stack), so it
-    does not locate the base. Kept for the calibration report.
+    The pin pose was a retreat (the tap arm backed 14.6 cm off the stack), so it does
+    not locate the base by itself. The overhead photo is what picks this candidate:
+    both bases share the rail, and the gap is visibly under the 0.61 m jig.
     """
     p_cup_xy = np.array([0.4872, 0.0077])
     p_tap_xy = np.array([0.4199, 0.4878])
@@ -61,7 +63,9 @@ def solve_tap_base_candidates() -> Dict[str, Tuple[np.ndarray, float]]:
     c, s = np.cos(psi), np.sin(psi)
     dy = float(p_cup_xy[1] - (s * p_tap_xy[0] + c * p_tap_xy[1]))
     same_rail = np.array([CUP_MOUNT[0], CUP_MOUNT[1] + dy, CUP_MOUNT[2]])
-    return {"parallel": (parallel, 0.0), "same_rail": (same_rail, psi), "rim_grab_fit": (TAP_MOUNT.copy(), 0.0)}
+    rim = np.array([CUP_MOUNT[0] - 0.0001, CUP_MOUNT[1] - 0.6066, CUP_MOUNT[2]])
+    return {"parallel": (parallel, 0.0), "same_rail": (same_rail, psi),
+            "rim_grab_0.61m": (rim, 0.0), "stack_reach": (TAP_MOUNT.copy(), 0.0)}
 
 
 def _rotz(yaw: float) -> np.ndarray:
@@ -124,10 +128,13 @@ PLASTIC_STACK_LOCAL_XY = np.array([0.4872, -0.0673])
 SIDE_PLACE_LOCAL_XY = np.array([0.4648, -0.2164])
 
 COASTER_XY = CUP_MOUNT[:2] + L1_COASTER_LOCAL_XY
-PAPER_STACK_XY = np.array([0.3800, 0.1450])   # reachable by both arms (cup top grasp, tap pin) and clear of the hand's path to the coaster
-PLASTIC_STACK_XY = np.array([0.4600, 0.1200])
+# Levels 1–4 start where the coaster is. The nested stack stands on that spot; the
+# wooden dish itself is set aside for the pour (one dish cannot hold the remaining
+# stack and the served cup). Level 5 is the only level whose cup starts somewhere else.
+PAPER_STACK_XY = COASTER_XY.copy()
+PLASTIC_STACK_XY = COASTER_XY.copy()
 SIDE_PLACE_XY = CUP_MOUNT[:2] + SIDE_PLACE_LOCAL_XY
-L2_COASTER_XY = COASTER_XY.copy()
+L2_COASTER_XY = np.array([0.400, -0.080])
 LEVEL1_CUP_XY = COASTER_XY.copy()
 PARKED_PAPER_STACK_XY = np.array([0.6400, 0.3550])
 PARKED_PLASTIC_STACK_XY = np.array([0.7000, 0.2800])
@@ -298,12 +305,12 @@ L5_KEEPOUT = [
     (PARKED_PAPER_STACK_XY, 0.10),
     (PARKED_PLASTIC_STACK_XY, 0.10),
     (MOUTH_WORLD_XY, 0.12),
-    # the two folded arms stand on the mat too (bounding spheres of their collision geometry at REST_Q, plus margin)
-    (np.array([0.20, -0.32]), 0.19),
-    (np.array([0.30, -0.26]), 0.10),
-    (np.array([0.28, -0.20]), 0.12),
+    # folded arms at REST_Q with the tap base at the stack-reach mount (tcp about (0.38, -0.22) and (0.32, 0.26))
+    (np.array([0.27, -0.19]), 0.18),
+    (np.array([0.38, -0.16]), 0.11),
+    (np.array([0.36, -0.08]), 0.10),
     (np.array([0.20, 0.30]), 0.19),
-    (np.array([0.30, 0.22]), 0.10),
+    (np.array([0.32, 0.24]), 0.11),
 ]
 
 # ---------------------------------------------------------------------------

@@ -20,14 +20,18 @@ from sim_station.skills import HOLD_DZ, Z_UP, fmt_mm, lever_dirs, lever_grip_fra
 from sim_station.skills_l2 import top_face_z
 
 PECK_Z_HI = 0.150
-PECK_DESCENT_V = 0.11
+PECK_DESCENT_V = 0.16
 PECK_THRESHOLD_N = 1.2
 
 
-PECK_TILTS = (-45.0, -35.0, -55.0, -25.0)       # fingers point down: the wide housing plate stays above the mat
+# A loose cup is pecked nearly straight down so the wrist housing stays above the fingers.
+# The stack stands farther out; those same tilts miss inverse kinematics, so the height peck keeps the shallower set that reaches it.
+CUP_TILTS = (-84.0, -78.0, -72.0, -66.0)
+STACK_TILTS = (-70.0, -62.0, -78.0, -54.0)
+PECK_TILTS = CUP_TILTS
 
 
-def _frame_for_peck(ctx: Ctx, xy: np.ndarray, z: float, tilts=PECK_TILTS, depth: float = 0.006):
+def _frame_for_peck(ctx: Ctx, xy: np.ndarray, z: float, tilts=PECK_TILTS, depth: float = -0.018):
     kin = ctx.kin["cup"]
     seeds = [L.REAL_L1_CUP_WAYPOINTS["paper_hold"][:6], np.array([0.0, 1.6, 1.1, 0.7, 0.0, 0.0]),
              np.array([0.3, 1.2, 0.9, 0.5, 0.0, 0.0]), np.array([0.2, 1.0, 0.5, 0.0, 0.0, 0.0]), ctx.q("cup")]
@@ -49,33 +53,26 @@ def _s_peck_impl(ctx: Ctx, xy: np.ndarray, z_hi: float = PECK_Z_HI, v_down: floa
            stack_peck: bool = False):
     """Descend with closed fingertips above `xy`. Returns dict(contact, z, occupied, z_free)."""
     kin = ctx.kin["cup"]
-    fr = _frame_for_peck(ctx, np.asarray(xy, dtype=float), z_hi, tilts=PECK_TILTS)
+    fr = _frame_for_peck(ctx, np.asarray(xy, dtype=float), z_hi, tilts=STACK_TILTS if stack_peck else CUP_TILTS)
     if fr is None:
         return dict(contact=False, z=float("nan"), occupied=False, z_free=float("nan"), reachable=False)
     T_hi, T_lo, z_free, q_hi = fr
     T_now = ctx.tcp("cup")
-    far = float(np.linalg.norm(T_now[:3, 3] - T_hi[:3, 3])) > 0.30 or float(np.linalg.norm(ctx.q("cup") - L.REST_Q)) < 0.4
-    if far:
-        # first move from rest: joint-space spline through a lifted point so the folded arm never sweeps the mat
-        T_up = T_hi.copy()
-        T_up[2, 3] += 0.10
-        r_up = kin.ik_multi(T_up, [q_hi, ctx.q("cup")])
-        qs = [ctx.q("cup")] + ([r_up.q] if r_up.ok else []) + [q_hi]
-        travel = M.via_move(qs, speed_scale=ctx.speed, min_T=1.2)
+    # always transit above the cups: a sideways move at peck height drags link 4 and the housing through the cup
+    T_up = T_hi.copy()
+    T_up[2, 3] = max(float(T_hi[2, 3]), float(T_now[2, 3]), 0.28)
+    r_up = kin.ik_multi(T_up, [q_hi, ctx.q("cup")])
+    if r_up.ok and float(np.linalg.norm(T_now[:3, 3] - T_hi[:3, 3])) > 0.04:
+        travel = M.via_move([ctx.q("cup"), r_up.q, q_hi], speed_scale=ctx.speed, min_T=0.7)
     else:
-        poses = [T_now]
-        if T_now[2, 3] < z_hi - 0.01:
-            up = T_now.copy()
-            up[2, 3] = z_hi
-            poses.append(up)
-        poses.append(T_hi)
-        travel = M.cart_move(kin, poses, ctx.q("cup"), v_cart=0.22, speed_scale=ctx.speed, min_T=0.35, profile="trapezoid")
+        travel = M.cart_move(kin, [T_now, T_hi], ctx.q("cup"), v_cart=0.28, speed_scale=ctx.speed, min_T=0.3, profile="trapezoid", max_joint_step=0.25)
     ctx.check_traj("cup", travel, grip_width=ctx.width("cup"))
     yield from ctx.play("cup", travel)
     z_bottom = (z_free - 0.0025) if z_stop is None else z_stop
     T_end = T_hi.copy()
     T_end[2, 3] = z_bottom
-    down = M.cart_move(kin, [T_hi, T_end], ctx.q("cup"), v_cart=v_down, speed_scale=ctx.speed, min_T=0.4, profile="trapezoid")
+    down = M.cart_move(kin, [T_hi, T_end], ctx.q("cup"), v_cart=v_down, speed_scale=ctx.speed, min_T=0.4,
+                       profile="trapezoid", max_joint_step=0.22)
     ctx.monitor("cup", True)
     state = {"n": 0, "t": 0}
 
@@ -108,7 +105,7 @@ def _s_peck_impl(ctx: Ctx, xy: np.ndarray, z_hi: float = PECK_Z_HI, v_down: floa
         T_u = T_c.copy()
         T_u[2, 3] = z_hi
         try:
-            up = M.cart_move(kin, [T_c, T_u], ctx.q("cup"), v_cart=0.12, speed_scale=ctx.speed, min_T=0.4)
+            up = M.cart_move(kin, [T_c, T_u], ctx.q("cup"), v_cart=0.12, speed_scale=ctx.speed, min_T=0.4, max_joint_step=0.25)
             yield from ctx.play("cup", up)
         except PlanError:
             pass
@@ -150,10 +147,17 @@ def s_find_height(ctx: Ctx):
     # lift the blade off the stack before anything else touches the fingers
     kin = ctx.kin["cup"]
     T0 = ctx.tcp("cup")
-    T1 = T0.copy()
-    T1[2, 3] += 0.05
-    up = M.cart_move(kin, [T0, T1], ctx.q("cup"), v_cart=0.08, speed_scale=ctx.speed, min_T=0.6)
-    yield from ctx.play("cup", up)
+    lifted = False
+    for dz in (0.05, 0.03, 0.015):
+        T1 = T0.copy()
+        T1[2, 3] = float(T0[2, 3]) + dz
+        try:
+            up = M.cart_move(kin, [T0, T1], ctx.q("cup"), v_cart=0.08, speed_scale=ctx.speed, min_T=0.4, max_joint_step=0.3)
+            yield from ctx.play("cup", up)
+            lifted = True
+            break
+        except PlanError:
+            continue
     return {"msg": f"{n} cups, top at {top * 100:.1f} cm (stopped at TCP {res['z'] * 100:.1f} cm)"}
 
 
@@ -175,7 +179,7 @@ def s_find_cup(ctx: Ctx, prior: np.ndarray, spacing: float = 0.03, iters: int = 
             return cache[key]
         if len(results) >= max_pecks:
             raise SkillFault(f"gave up after {max_pecks} pecks without pinning down the cup")
-        r = yield from s_peck(ctx, p)
+        r = yield from s_peck(ctx, p, z_stop=0.08)
         if not r["reachable"]:
             cache[key] = None
             return None
@@ -254,27 +258,57 @@ def fit_cup_position(ctx: Ctx, near: np.ndarray, half: float = 0.11) -> Tuple[np
     return best
 
 
-def s_fit_cup(ctx: Ctx, near: np.ndarray, max_pecks: int = 16):
-    """Level 5 fine search: peck a pattern around the coarse hit, then fit where the cup must stand from the stop heights."""
+def _predict_hit(p: np.ndarray, c: np.ndarray, radius: float) -> bool:
+    """A peck at p touches a cup centred at c when the fingertip disk overlaps the rim. Used only to choose the next peck."""
+    return float(np.linalg.norm(np.asarray(p) - np.asarray(c))) < radius
+
+
+def s_fit_cup(ctx: Ctx, near: np.ndarray, max_pecks: int = 8):
+    """Fine search. The next peck is the one that splits the set of centres still consistent with the touches so far
+    (the information-gain rule in the tactile-localisation papers), and it stops once that set is under 5 mm."""
     near = np.asarray(near, dtype=float)
     ctx.scratch["peck_log"] = []
-    pattern = [near] + [near + 0.05 * np.array([np.cos(a), np.sin(a)]) for a in np.radians(np.arange(0, 360, 45))]
-    pattern += [near + 0.085 * np.array([np.cos(a), np.sin(a)]) for a in np.radians(np.arange(22.5, 360, 45))]
+    xs = np.arange(-0.07, 0.071, 0.008)
+    ys = np.arange(-0.07, 0.071, 0.008)
+    cand = [near + np.array([dx, dy]) for dx in xs for dy in ys]
+    probed: List[np.ndarray] = []
     done = 0
-    for p in pattern:
-        if done >= max_pecks:
-            break
-        if done >= 11 and any(pk["occupied"] for pk in ctx.scratch["peck_log"]) and done % 2 == 1:
-            c_try, v_try, spread_try = fit_cup_position(ctx, near)
-            if spread_try < 0.008 and v_try == 0:
+    while done < max_pecks and len(cand) > 1:
+        if done >= 4 and any(pk["occupied"] for pk in ctx.scratch["peck_log"]) and any(not pk["occupied"] for pk in ctx.scratch["peck_log"]):
+            _c, v_try, spread_try = fit_cup_position(ctx, near)
+            if v_try == 0 and spread_try < 0.005:
                 break
-        if any(np.linalg.norm(p - c) < r - 0.03 for c, r in L.L5_KEEPOUT):
-            continue
-        r = yield from s_peck(ctx, p)
+        centre = np.mean(cand, axis=0)
+        ring = [centre]
+        for rad in (0.032, 0.050, 0.070):
+            for ang in np.linspace(0.0, 2.0 * np.pi, 8, endpoint=False):
+                ring.append(centre + rad * np.array([np.cos(ang), np.sin(ang)]))
+        best, best_score = None, 1e9
+        n = float(len(cand))
+        for p in ring:
+            if any(np.linalg.norm(p - q) < 0.012 for q in probed):
+                continue
+            if any(np.linalg.norm(p - c0) < r - 0.02 for c0, r in L.L5_KEEPOUT):
+                continue
+            occ = sum(1 for c in cand if _predict_hit(p, c, 0.050))
+            score = abs(occ / n - 0.5)
+            if score < best_score:
+                best_score, best = score, p
+        if best is None:
+            break
+        probed.append(np.asarray(best, float))
+        r = yield from s_peck(ctx, best, z_stop=0.08)
         if not r["reachable"]:
             continue
         done += 1
-        ctx.event(f"peck ({p[0]:.3f}, {p[1]:.3f}) -> {'something tall' if r['occupied'] else 'mat'} (stopped at {r['z'] * 100:.1f} cm)")
+        ctx.event(f"peck ({best[0]:.3f}, {best[1]:.3f}) -> {'something tall' if r['occupied'] else 'mat'} (stopped at {r['z'] * 100:.1f} cm)")
+        if r["occupied"]:
+            cand = [c for c in cand if _predict_hit(best, c, 0.064)]
+        else:
+            cand = [c for c in cand if not _predict_hit(best, c, 0.038)]
+        if not cand:
+            cand = [np.asarray(best, float)]
+            break
     if not any(pk["occupied"] for pk in ctx.scratch["peck_log"]):
         raise SkillFault("no peck around the coarse hit stopped high: nothing to fit")
     c, viol, spread = fit_cup_position(ctx, near)
@@ -296,6 +330,9 @@ def search_grid(ctx: Ctx) -> List[np.ndarray]:
             if any(np.linalg.norm(p - c) < r for c, r in L.L5_KEEPOUT):
                 continue
             pts.append(p)
+    # spiral out from the middle of the mat so a cup near the middle is found in a handful of pecks, without dropping the corners
+    mid = np.array([0.5 * (L.L5_REGION_X[0] + L.L5_REGION_X[1]), 0.5 * (L.L5_REGION_Y[0] + L.L5_REGION_Y[1])])
+    pts.sort(key=lambda p: (int(np.linalg.norm(p - mid) / 0.065), np.arctan2(p[1] - mid[1], p[0] - mid[0])))
     return pts
 
 
@@ -304,7 +341,7 @@ def s_scan_mat(ctx: Ctx):
     pts = search_grid(ctx)
     done = 0
     for p in pts:
-        r = yield from s_peck(ctx, p)
+        r = yield from s_peck(ctx, p, z_stop=0.08)
         done += 1
         if not r["reachable"]:
             continue

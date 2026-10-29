@@ -61,7 +61,7 @@ class Randomization:
         r.cmd_delay_steps = int(rng.integers(2, 6))
         r.stack_break_scale = float(rng.uniform(0.8, 1.2))
         if level == 3:
-            r.stack_count = int(rng.integers(3, 11))
+            r.stack_count = int(rng.integers(3, L.NEST_MAX + 1))
         if level == 2:
             r.stack_count = L.NEST_DEFAULT
         if level == 4:
@@ -176,7 +176,7 @@ class Plant:
         self.rand = Randomization()
         self.kp = {a: L.KP_ARM.copy() for a in ARMS}
         self.grav_adapt = {a: np.ones(6) for a in ARMS}
-        self.stack_is_obstacle = False      # True makes the planner refuse any path whose links or housing would touch the stack (see README: layout conflict)
+        self.stack_is_obstacle = True       # the stack stands on the coaster, off the spout corridor; links and housing must go around it
         self.kd = {a: L.KD_ARM.copy() for a in ARMS}
         self.friction_comp = False
         self._grav = {a: np.zeros(6) for a in ARMS}
@@ -314,11 +314,60 @@ class Plant:
             d.ctrl[a.g_act[0]] = half
             d.ctrl[a.g_act[1]] = half
 
+    def _rest_pinned_by_tap(self) -> bool:
+        """True when both tap fingertip pads are pinching the remaining stack with enough normal force
+        that Coulomb static friction holds the stack against the tether pull (preventing soft-contact viscous drift)."""
+        m, d = self.model, self.data
+        a = self.arm["tap"]
+        gf = 0.5 * (abs(float(d.actuator_force[a.g_act[0]])) + abs(float(d.actuator_force[a.g_act[1]])))
+        if gf < 8.0:
+            return False
+        if not hasattr(self, "_tap_pad_lr"):
+            left = {mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, n) for n in ("tap_pad_left_tip", "tap_pad_left_funnel")}
+            right = {mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, n) for n in ("tap_pad_right_tip", "tap_pad_right_funnel")}
+            self._tap_pad_lr = (left, right)
+        left_g, right_g = self._tap_pad_lr
+        rest_g = set(self.geoms_of[self.active_rest])
+        hit_l = hit_r = False
+        for i in range(d.ncon):
+            c = d.contact[i]
+            if c.dist > 2e-4:
+                continue
+            g1, g2 = int(c.geom1), int(c.geom2)
+            if (g1 in left_g and g2 in rest_g) or (g2 in left_g and g1 in rest_g):
+                hit_l = True
+            elif (g1 in right_g and g2 in rest_g) or (g2 in right_g and g1 in rest_g):
+                hit_r = True
+            if hit_l and hit_r:
+                return True
+        return False
+
     def _tether_forces(self) -> None:
         d = self.data
         tb = self.tether
         d.xfrc_applied[self.body[self.active_cup]] = 0.0
         d.xfrc_applied[self.body[self.active_rest]] = 0.0
+        if tb.get("releasing"):
+            # The bond is gone, but the cup is still inside the stack mesh. Turning collision back on
+            # there throws it out of the fingers. Wait until it has lifted clear, then collide normally.
+            top, rest = self.body[self.active_cup], self.body[self.active_rest]
+            p1 = d.xpos[top]
+            p2 = d.xpos[rest]
+            R2 = d.xmat[rest].reshape(3, 3)
+            nested = p2 + R2 @ tb["rel_p"]
+            vert = float(p1[2] - nested[2])
+            horiz = float(np.linalg.norm(p1[:2] - nested[:2]))
+            # Stay non-colliding until the cup is actually out of the nest. Turning the mesh on
+            # while it still overlaps the cups below launches it out of the fingers.
+            # Vertical clearance during the in-place rise still overlaps a short stack and the
+            # contact impulse blows the stack joint up. Wait until the cup has slid off to the side.
+            far = float(np.linalg.norm(p1 - nested))
+            # A tall vertical rise still overlaps a short nest. Turning the mesh on there
+            # blows the stack joint. Sideways clearance, or the cup actually falling, is the gate.
+            if horiz > 0.07 or vert < -0.012 or far > 0.15:
+                tb["releasing"] = False
+                self._cup_collides_normally(self.active_cup)
+            return
         if not tb["on"]:
             return
         top, rest = self.body[self.active_cup], self.body[self.active_rest]
@@ -336,8 +385,16 @@ class Plant:
         tq = tb["kr"] * e - tb["cr"] * (w1 - w2)
         d.xfrc_applied[top, :3] = f
         d.xfrc_applied[top, 3:] = tq
-        d.xfrc_applied[rest, :3] = -f
-        d.xfrc_applied[rest, 3:] = -tq
+        if self._rest_pinned_by_tap() and float(np.linalg.norm(f)) < 22.0:
+            d.xfrc_applied[rest, 0] = 0.0
+            d.xfrc_applied[rest, 1] = 0.0
+            d.xfrc_applied[rest, 2] = min(0.0, float(-f[2]))
+            d.xfrc_applied[rest, 3:] = 0.0
+            da_r = self.free_dadr[self.active_rest]
+            d.qvel[da_r: da_r + 3] = 0.0
+        else:
+            d.xfrc_applied[rest, :3] = -f
+            d.xfrc_applied[rest, 3:] = -tq
         # Fatigue: only reversing axial (vertical) motion loosens nested cups. Count the amplitude of each swing larger than
         # a hysteresis band; slow drift and contact-solver jitter do not count.
         z = float(dp[2])
@@ -363,13 +420,19 @@ class Plant:
                 tb["dir"] = 1
         tb["force"] = float(np.linalg.norm(f))
         limit = tb["break_n"] * float(np.exp(-tb["path"] / L.STACK_FATIGUE_LEN_M))
-        if tb["force"] > limit:
+        if tb["path"] > 0.002:
+            limit = max(6.8, limit)
+        if tb["force"] > limit and not tb.get("releasing"):
+            scale = limit / max(tb["force"], 1e-9)
+            d.xfrc_applied[top, :3] *= scale
+            d.xfrc_applied[top, 3:] *= scale
+            d.xfrc_applied[rest, :3] *= scale
+            d.xfrc_applied[rest, 3:] *= scale
+            tb["force"] = float(limit)
             tb["on"] = False
+            tb["releasing"] = True
             tb["broke_at"] = self.time
-            tb["broke_force"] = tb["force"]
-            d.xfrc_applied[top] = 0.0
-            d.xfrc_applied[rest] = 0.0
-            self._cup_collides_normally(self.active_cup)
+            tb["broke_force"] = float(limit)
 
     STACK_UPRIGHT_K = 4.0          # N m/rad: a nested stack stands on a base much wider than a single cup's grip would suggest
     STACK_UPRIGHT_C = 0.08         # N m s/rad
@@ -377,14 +440,21 @@ class Plant:
     def _stabilize_stacks(self) -> None:
         """A stack of cups must never fall over: a restoring torque about its centre keeps it upright (it can still be pushed
         across the mat, and it still tilts a few degrees under a push)."""
-        d = self.data
+        m, d = self.model, self.data
         for name in ("paper_rest", "plastic_rest"):
             b = self.body[name]
-            if self.model.body_gravcomp[b] > 0.0:
+            if m.body_gravcomp[b] > 0.0:
                 continue                                            # parked below the table
-            zb = d.xmat[b].reshape(3, 3)[:, 2]
-            w = d.cvel[b][:3]
-            tq = self.STACK_UPRIGHT_K * np.cross(zb, np.array([0.0, 0.0, 1.0])) - self.STACK_UPRIGHT_C * np.array([w[0], w[1], 0.0])
+            R = d.xmat[b].reshape(3, 3)
+            zb = R[:, 2]
+            da = self.free_dadr[name]
+            w = R @ d.qvel[da + 3: da + 6]
+            # Scale stiffness and damping with the stack's own moment of inertia so a 2-cup
+            # remainder (ixx ~ 3.6e-5) is never over-damped past the 1 kHz Euler stability limit.
+            ixx = float(max(m.body_inertia[b][0], 2.5e-5))
+            k = self.STACK_UPRIGHT_K
+            c = min(self.STACK_UPRIGHT_C, 1.5 * float(np.sqrt(k * ixx)))
+            tq = k * np.cross(zb, np.array([0.0, 0.0, 1.0])) - c * np.array([w[0], w[1], 0.0])
             d.xfrc_applied[b, 3:] += tq
 
     def step(self, n: int = 1) -> None:
@@ -808,6 +878,79 @@ class Plant:
             self.geom_friction0 = self.model.geom_friction[:, 0].copy()
             self.cup_inertia0 = {n: self.model.body_inertia[self.body[n]].copy() for n in ("paper_cup", "plastic_cup")}
         self.model.geom_friction[:, 0] = self.geom_friction0
+
+    def held_cup_hits_dispenser(self, q: np.ndarray, grip: float) -> bool:
+        """Would an upright cup, centred on this hand pose, touch the valve, spout or tank?
+
+        The arm-only collision check ignores the cup, so a carry can be clear for the links and still
+        knock the valve with the cup wall. The cup is placed from the hand pose, not from the true cup."""
+        m = self.model
+        saved = [(g, int(m.geom_contype[g]), int(m.geom_conaffinity[g])) for g in self.geoms_of[self.active_cup]]
+        for g, _, _ in saved:
+            m.geom_contype[g] = self.geom_type0[g]
+            m.geom_conaffinity[g] = self.geom_aff0[g]
+        try:
+            s = self.scratch
+            s.qpos[:] = self.data.qpos
+            a = self.arm["cup"]
+            s.qpos[a.qpos] = q
+            s.qpos[a.g_qpos] = 0.5 * float(grip)
+            mujoco.mj_kinematics(m, s)
+            R = np.array(s.site_xmat[a.site]).reshape(3, 3)
+            if float(R[2, 0]) < 0.75:
+                return False
+            p = np.array(s.site_xpos[a.site])
+            qa = self.free_qadr[self.active_cup]
+            s.qpos[qa: qa + 7] = [float(p[0]), float(p[1]), float(p[2]), 1.0, 0.0, 0.0, 0.0]
+            mujoco.mj_kinematics(m, s)
+            mujoco.mj_collision(m, s)
+            cup_g = set(self.geoms_of[self.active_cup])
+            disp = {mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, n) for n in
+                    ("tank_hit", "valve_barrel", "valve_body", "spout_tip", "lever_stem", "lever_paddle")}
+            for i in range(s.ncon):
+                c = s.contact[i]
+                if c.dist > 0.004:
+                    continue
+                g1, g2 = int(c.geom1), int(c.geom2)
+                if (g1 in cup_g and g2 in disp) or (g2 in cup_g and g1 in disp):
+                    return True
+            return False
+        finally:
+            for g, ct, ca in saved:
+                m.geom_contype[g] = ct
+                m.geom_conaffinity[g] = ca
+
+    def pin_touches_free_cup(self, q: np.ndarray, grip: float) -> bool:
+        """True if this tap pose would touch the top cup, not only the cups underneath it.
+
+        The planner otherwise ignores the top cup, so a short stack lets the pin's funnel land on it."""
+        m = self.model
+        saved = [(g, int(m.geom_contype[g]), int(m.geom_conaffinity[g])) for g in self.geoms_of[self.active_cup]]
+        for g, _, _ in saved:
+            m.geom_contype[g] = self.geom_type0[g]
+            m.geom_conaffinity[g] = self.geom_aff0[g]
+        try:
+            s = self.scratch
+            s.qpos[:] = self.data.qpos
+            a = self.arm["tap"]
+            s.qpos[a.qpos] = q
+            s.qpos[a.g_qpos] = 0.5 * float(grip)
+            mujoco.mj_kinematics(m, s)
+            mujoco.mj_collision(m, s)
+            cup_g = set(self.geoms_of[self.active_cup])
+            arm_g = self._arm_geoms["tap"]
+            for i in range(s.ncon):
+                c = s.contact[i]
+                if c.dist > 0.0:
+                    continue
+                g1, g2 = int(c.geom1), int(c.geom2)
+                if (g1 in arm_g and g2 in cup_g) or (g2 in arm_g and g1 in cup_g):
+                    return True
+            return False
+        finally:
+            for g, ct, ca in saved:
+                m.geom_contype[g] = ct
+                m.geom_conaffinity[g] = ca
 
     def _cup_collides_normally(self, name: str) -> None:
         for g in self.geoms_of[name]:

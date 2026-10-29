@@ -40,7 +40,7 @@ class Analysis:
     energy: np.ndarray                # 0..1, smoothed loudness
     low: np.ndarray                   # 0..1, smoothed bass energy
     duration: float
-    half_time: bool = False           # dance every second beat when the song is fast (a-ha)
+    half_time: bool = False           # dance every second beat only when the tracked tempo is above 140 BPM
     meta: dict = field(default_factory=dict)
 
     def beat_pos(self, t: float) -> float:

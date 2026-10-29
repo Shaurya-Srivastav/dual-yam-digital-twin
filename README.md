@@ -8,6 +8,8 @@ Videos of all five levels and of the dance mode are on the [project page](https:
 
 Project page: https://dual-yam-digital-twin.netlify.app
 
+**Built on:** [Vezzani et al. 2017, tactile localisation](https://doi.org/10.1109/tro.2017.2707092) · [Murali, Dahiya, Kaboli 2022, information gain for tactile pose estimation](https://arxiv.org/abs/2205.04697) · [Brudermüller et al. ICRA 2026, touch-based localisation](https://doi.org/10.1109/icra57385.2026.11697596) · [Lee, Park, Cho 2025, contact-pause grasping](https://arxiv.org/abs/2509.12969) · [Lips and wyffels 2023, proprioceptive articulated manipulation](https://tlips.be/revisiting-proprioception-for-articulated-manipulation/) · [Jamali, Kormushev, Caldwell 2013, T-bar contact states](https://kormushev.com/papers/Jamali_OCEANS-2013.pdf) · [Toskov et al. CoRL 2022, gravitational pivoting](https://arxiv.org/abs/2210.05068). What each one contributed, and what this twin does not do from it, is in [docs/RESEARCH.md](docs/RESEARCH.md).
+
 ## What is in here
 
 | Part | Where | What it does |
@@ -35,23 +37,23 @@ python -m sim_station.evaluate --levels 1 2 3 4 5 --trials 50 --jobs 8
 python -m sim_station.proofs               # replay of the real Level 1 waypoints + IK equivalence
 ```
 
-Dance Mode plays three songs from `sim_station/assets/*.mp3`. The recordings are copyrighted, so they are not in this public repo: the owner keeps them in a private repo and fetches them with `tools/get_audio.sh`; anyone else adds their own mp3s under the file names in `sim_station/audio.py` (`SONGS`). Beats are tracked from the audio itself and cached as numbers only.
+Dance Mode plays three songs from `sim_station/assets/*.mp3`. Owning a copy of a song does not give the right to republish it, so the recordings are not in this public repo, its videos or the project page: the owner keeps them in a private repo and fetches them with `tools/get_audio.sh`; anyone else adds their own mp3s under the file names in `sim_station/audio.py` (`SONGS`). On the project page, "Play my own copy" plays a song file from the visitor's computer in sync with the dance clip without uploading it. Beats are tracked from the audio itself and cached as numbers only.
 
 ## The five levels
 
 1. Upright cup in the coaster, position known.
-2. Inverted nested stack, height known: pin with the tap arm, wiggle, pull, then **flip the cup with one arm** (see below), set it down, side-grasp, serve.
-3. Same, height unknown: peck down on the stack to count the cups.
+2. Inverted nested stack on the coaster spot, height known: pin the lower stack with the tap arm, turn the cup hand into the flip attitude, grasp the top cup, wiggle, pull, **roll it upright with one arm** (see below), set it down, side-grasp, serve.
+3. Same, height unknown (3 to 11 cups): peck down on the stack to count the cups.
 4. Lever angle unknown (it turns through a full 360°): sweep a fingertip around the valve, stop at the first touch (below the handle's breakaway force), compute the handle yaw from the known hand and handle shapes, park it, touch again to confirm.
-5. Cup anywhere on the mat: coarse peck grid, then a set-membership fit of where the cup must stand from every peck outcome (fit error 3-6 mm).
+5. Cup anywhere on the mat: coarse peck grid, then a set-membership fit of where the cup must stand from every peck outcome. The next peck is the one that splits the remaining candidate centres about in half (not an expected-entropy computation).
 
 ### One-arm cup flip
 
-With the hand turned 45-60° off the arm's radial line and tilted 20-30° down, the wrist is aligned so that J6 alone sweeps about 180° with the hand position fixed. The cup is held by its base band with its axis perpendicular to the approach axis, so one wrist roll turns it over. The cup is then lowered until its base edge touches the mat and released. Found by an IK search over attitudes (`skills_l2.plan_flip`).
+The wrist is turned to the flip attitude, about −65° off the arm's radial line and 8° down, **before** the fingers close on the top cup's base band. The lift off the stack, a 9 cm slide clear of it and one Cartesian roll of about 166° turn the cup upright. The wrist housing cannot follow the cup base the last few centimetres, so the cup is let go a short height above the mat and lands on its base. The attitude was found by an IK search over hand attitudes (`skills_l2.flip_motion`); it is not the gravitational pivoting of Toskov et al.
 
 ## Honest status
 
-See [docs/RESULTS.md](docs/RESULTS.md). Short version: the nominal (no randomization) runs of Levels 1 and 4 pass the full referee, the real-data replay passes (cup 0.9 mm from the outlet axis), Levels 2, 3 and 5 complete the task but still brush the remaining stack or the target cup with the arm housing, and the randomized success rates (24 trials per level) are 79 / 38 / 21 / 25 / 33 %, far below the 98 / 98 / 95 / 95 / 90 % targets. Nothing here has run on the real robots.
+See [docs/RESULTS.md](docs/RESULTS.md). Short version: the nominal (no randomization) runs of all five levels pass the full referee, with the remaining stack never touched in Levels 2 and 3. The real-data replay passes (cup 0.9 mm from the outlet axis). The randomized success rates (24 trials per level) are 79 / 42 / 42 / 21 / 12 %, well below the 98 / 98 / 95 / 95 / 90 % targets. Nothing here has run on the real robots.
 
 ## Docs
 

@@ -20,7 +20,7 @@ from sim_station.sensing import Baseline
 
 HOLD_DZ = L.CUP_GRASP_HEIGHT_ABOVE_BASE      # TCP height above the cup base when held at mid height
 Z_UP = np.array([0.0, 0.0, 1.0])
-LEVER_TILT_DEG = 40.0                          # pinch approach, below horizontal, along the handle
+LEVER_TILT_DEG = 50.0                          # steeper pinch: the 40 deg arc misses the last of the lift from the closer base
 LEVER_OPEN_THETA = 1.05                        # how far the handle is lifted (flow starts at 0.45)
 LEVER_GRIP_Z = 0.0015 + 0.5 * L.LEVER_HANDLE_THICK
 
@@ -243,7 +243,7 @@ def spout_entry(ctx: Ctx, T0: np.ndarray) -> np.ndarray:
     cands = (plus_y + minus_x) if T0[1, 3] > ys + 0.10 else (minus_x + plus_y)
     last = ""
     for e, side in cands:
-        for tilt in (0.0, -12.0, -25.0, 12.0):
+        for tilt in (0.0, -8.0, 8.0, -12.0):
             try:
                 ok = True
                 for z in (0.118, spout_z() + 0.002, spout_z()):
@@ -316,7 +316,7 @@ def s_to_coaster(ctx: Ctx, seat_z: float):
     T0 = ctx.tcp("cup")
     seeds = [ctx.q("cup"), L.REAL_L1_CUP_WAYPOINTS["in_coaster"][:6], np.array([0.0, 1.6, 1.1, 0.7, 0.0, 0.0])]
     chosen = None
-    for tilt in (0.0, -10.0, -20.0, -30.0):
+    for tilt in (0.0, -8.0, -15.0):
         top = side_frame(kin, np.array([cx, cy]), seat_z + HOLD_DZ + 0.035, tilt=tilt)
         low = side_frame(kin, np.array([cx, cy]), seat_z + HOLD_DZ - 0.006, tilt=tilt)
         if kin.ik_multi(top, seeds).ok and kin.ik_multi(low, seeds).ok:
@@ -325,17 +325,30 @@ def s_to_coaster(ctx: Ctx, seat_z: float):
     if chosen is None:
         raise SkillFault("the coaster cannot be reached with the cup upright")
     ctx.scratch["coaster_tilt"] = chosen[0]
-    poses = [T0, chosen[1]]
-    if ctx.bel.stack_n is not None:
-        # the rest of the stack is still standing between the spout and the coaster: carry over it, not past it
-        z_over = max(top_over(ctx) + 0.07, 0.25)
-        up = T0.copy()
-        up[2, 3] = z_over
-        across = chosen[1].copy()
-        across[2, 3] = z_over
-        poses = [T0, up, across, chosen[1]]
-    traj = M.cart_move(kin, poses, ctx.q("cup"), v_cart=L.CARRY_SPEED_M_S * 1.4, speed_scale=ctx.speed, min_T=0.8, max_joint_step=0.2)
-    ctx.check_traj("cup", traj)
+    z_over = max(top_over(ctx) + 0.08, 0.28) if ctx.bel.stack_n is not None else 0.22
+    up = T0.copy()
+    up[2, 3] = max(float(T0[2, 3]), z_over)
+    across = chosen[1].copy()
+    across[2, 3] = z_over
+    # a waypoint out beside the dispenser, so the carry does not cut across the stack on the coaster spot
+    side = side_frame(kin, np.array([min(cx, L.MOUTH_WORLD_XY[0]) - 0.06, L.MOUTH_WORLD_XY[1]]), z_over, tilt=chosen[0])
+    routes = [
+        [T0, up, across, chosen[1]],
+        [T0, up, side, across, chosen[1]],
+        [T0, chosen[1]],
+    ]
+    last = ""
+    traj = None
+    for poses in routes:
+        try:
+            traj = M.cart_move(kin, poses, ctx.q("cup"), v_cart=L.CARRY_SPEED_M_S * 1.4, speed_scale=ctx.speed, min_T=0.8, max_joint_step=0.22)
+            ctx.check_traj("cup", traj)
+            break
+        except PlanError as exc:
+            last = str(exc)
+            traj = None
+    if traj is None:
+        raise SkillFault(f"no way to the coaster that stays off the stack ({last})")
     yield from ctx.play("cup", traj)
     return {"msg": "cup held 3.5 cm above the coaster"}
 
@@ -383,6 +396,42 @@ def s_place_cup(ctx: Ctx, seat_z: float):
         return False
 
     done = yield from ctx.play("cup", traj, guard=guard, on_tick=on_tick)
+    # The well pushes an off-centre cup toward the middle. Follow that push a few millimetres
+    # while the jaws still hold, so the cup is let go over the centre rather than where the grasp sat.
+    dt = CTRL_STEPS * ctx.plant.dt
+    T_hold = ctx.tcp("cup").copy()
+    shift = np.zeros(3)
+    for _ in range(int(0.55 / dt)):
+        f = np.array(ctx.mon["cup"].force, dtype=float)
+        f[2] = 0.0
+        if float(np.linalg.norm(f)) > 0.45:
+            shift[:2] += np.clip(f[:2] * 0.0011, -0.0014, 0.0014)
+            shift[:2] = np.clip(shift[:2], -0.012, 0.012)
+        T = T_hold.copy()
+        T[:3, 3] = T_hold[:3, 3] + shift
+        r = kin.ik(T, ctx.q("cup"))
+        if r.ok and np.max(np.abs(r.q - ctx.q("cup"))) < 0.08:
+            ctx.q_cmd["cup"] = r.q
+            ctx.plant.command_arm("cup", r.q, np.zeros(6))
+        else:
+            ctx.hold("cup")
+        yield
+    # The carry can finish a centimetre off the coaster axis. Walk the hand back onto it
+    # before the jaws open. The cup centre is the TCP for this side grasp.
+    T_now = ctx.tcp("cup").copy()
+    err = np.array([cx - float(T_now[0, 3]), cy - float(T_now[1, 3]), 0.0])
+    nxy = float(np.linalg.norm(err[:2]))
+    if nxy > 0.003:
+        err[:2] *= min(1.0, 0.018 / nxy)
+        T_fix = T_now.copy()
+        T_fix[:3, 3] = T_now[:3, 3] + err
+        try:
+            fix = M.cart_move(kin, [T_now, T_fix], ctx.q("cup"), v_cart=0.015, speed_scale=ctx.speed,
+                              min_T=0.35, max_joint_step=0.12)
+            ctx.check_traj("cup", fix, grip_width=ctx.width("cup"))
+            yield from ctx.play("cup", fix)
+        except PlanError:
+            pass
     ctx.monitor("cup", False)
     z_end = float(ctx.tcp("cup")[2, 3])
     expected = seat_z + HOLD_DZ
