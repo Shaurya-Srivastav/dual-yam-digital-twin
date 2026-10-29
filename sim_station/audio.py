@@ -28,6 +28,7 @@ SONGS: Dict[str, dict] = {
     "rick": {"file": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster).mp3", "title": "Never Gonna Give You Up", "artist": "Rick Astley", "style": "rick"},
     "aha": {"file": "a-ha - Take On Me (Official Video) [4K].mp3", "title": "Take On Me", "artist": "a-ha", "style": "aha"},
     "beegees": {"file": "Bee Gees - Stayin' Alive (Official Music Video).mp3", "title": "Stayin' Alive", "artist": "Bee Gees", "style": "disco"},
+    "click": {"file": "", "title": "Click track", "artist": "generated", "style": "click", "generated": True},
 }
 
 
@@ -45,6 +46,8 @@ class Analysis:
 
     def beat_pos(self, t: float) -> float:
         """Fractional beat index at audio time t, interpolated through the tracked beats (extrapolated at the ends)."""
+        if not np.isfinite(self.bpm):
+            return 0.0
         b = self.beats
         if len(b) < 2:
             return t * self.bpm / 60.0
@@ -94,8 +97,43 @@ def _mel_filter(n_mels: int = 64, fmin: float = 30.0, fmax: float = 8000.0) -> n
     return fb
 
 
+def click_track(bpm: float = 120.0, seconds: float = 8.0, sr: int = SR) -> np.ndarray:
+    """A generated click track. No recording. Used so beat tests do not need a song file."""
+    if bpm <= 0 or seconds <= 0:
+        raise ValueError("bpm and seconds must be positive")
+    n = int(seconds * sr)
+    y = np.zeros(n, dtype=float)
+    step = int(round(sr * 60.0 / bpm))
+    width = max(int(0.008 * sr), 8)
+    window = np.hanning(width)
+    for k in range(0, n - width, step):
+        y[k:k + width] += window
+    return y
+
+
+def _quiet(duration: float, reason: str) -> Analysis:
+    return Analysis(bpm=float("nan"), beats=np.zeros(0), downbeats=np.zeros(0), env_t=np.zeros(0), energy=np.zeros(0),
+                    low=np.zeros(0), duration=float(duration), half_time=False, meta={"ok": False, "reason": reason})
+
+
+def wav_bytes(y: np.ndarray, sr: int = SR) -> bytes:
+    """16-bit mono WAV. The click track is generated; it is not a recording."""
+    import io
+    import wave
+    pcm = np.clip(np.asarray(y, dtype=float), -1.0, 1.0)
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as fh:
+        fh.setnchannels(1)
+        fh.setsampwidth(2)
+        fh.setframerate(sr)
+        fh.writeframes((pcm * 32767.0).astype(np.int16).tobytes())
+    return buf.getvalue()
+
+
 def analyze(y: np.ndarray) -> Analysis:
-    y = y.astype(np.float64)
+    y = np.nan_to_num(np.asarray(y, dtype=np.float64).reshape(-1), nan=0.0, posinf=0.0, neginf=0.0)
+    if y.size < NFFT:
+        return _quiet(y.size / SR, "shorter than one analysis window")
     f, t, Z = signal.stft(y, fs=SR, nperseg=NFFT, noverlap=NFFT - HOP, boundary=None, padded=False)
     P = np.abs(Z) ** 2
     mel = np.log1p(_mel_filter() @ P * 1e3)
@@ -157,6 +195,8 @@ def analyze(y: np.ndarray) -> Analysis:
     # loudness envelope at 10 Hz
     hop10 = SR // 10
     m = len(y) // hop10
+    if m < 2 or not np.isfinite(bpm) or bpm <= 0:
+        return _quiet(len(y) / SR, "not enough audio to track")
     rms = np.sqrt(np.mean(y[: m * hop10].reshape(m, hop10) ** 2, axis=1))
     lowband = signal.sosfilt(signal.butter(4, 150.0, btype="low", fs=SR, output="sos"), y)
     lw = np.sqrt(np.mean(lowband[: m * hop10].reshape(m, hop10) ** 2, axis=1))
@@ -188,6 +228,20 @@ def analyze_all(force: bool = False) -> None:
                 disk = {}
         changed = False
         for sid, meta in SONGS.items():
+            if meta.get("generated"):
+                stamp = 1
+                if not force and sid in disk and disk[sid].get("stamp") == stamp:
+                    _cache[sid] = Analysis.from_json(disk[sid]["a"])
+                    continue
+                status["working"] = meta["title"]
+                try:
+                    a = analyze(click_track())
+                    _cache[sid] = a
+                    disk[sid] = {"stamp": stamp, "a": a.to_json()}
+                    changed = True
+                except Exception as exc:
+                    status["error"] = f"{sid}: {type(exc).__name__}: {exc}"
+                continue
             path = ASSETS / meta["file"]
             stamp = path.stat().st_mtime if path.exists() else 0
             if sid in disk and disk[sid].get("stamp") == stamp:

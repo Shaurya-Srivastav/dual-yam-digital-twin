@@ -30,6 +30,7 @@ WINDOW_S = 10.0
 class Station:
     def __init__(self) -> None:
         self.lock = threading.RLock()
+        self.t_wall = time.time()
         self.sess = Session()
         self.plant = self.sess.plant
         self.mode = "IDLE"                    # IDLE RUNNING PAUSED FAULT DONE SCRUB DANCE
@@ -413,7 +414,9 @@ class Station:
                 res = self.sess.check_pass()
                 res.pop("violations", None)
             return dict(
-                mode=self.mode, cfg=dict(self.cfg), speed=self.speed, t=float(P.time - t_zero), sim_rate=round(self.sim_rate, 2),
+                mode=self.mode, cfg=dict(self.cfg), speed=self.speed, t=float(P.time - t_zero), wall_s=round(time.time() - self.t_wall, 1) if hasattr(self, "t_wall") else None,
+                sim_rate=round(self.sim_rate, 2),
+                provenance=dict(physical_validation=False, stack_assist=bool(P.stack_assist), pour="dry_timer", view="simulation_render"),
                 frame_id=self.frame_id, frame_ms=round(self.frame_ms, 1), progress=ex.progress(), fault=ex.fault,
                 steps=steps, events=[(round(t - t_zero, 2), m) for t, m in list(ctx.events)[-60:]], telemetry=tel,
                 pour=dict(lever_deg=round(lever, 1), flow_s=round(P.flow_time_with_cup, 2), target_s=7.0, flowing=bool(lever > np.degrees(L.LEVER_FLOW_THRESHOLD))),
@@ -443,8 +446,9 @@ class Station:
                     out = evaluate.run_level(lv, trials, jobs, progress=prog)
                     out.pop("results", None)
                     self.mc["results"][str(lv)] = out
-            finally:
                 self.mc.update(running=False, progress="done")
+            except Exception as exc:
+                self.mc.update(running=False, progress="failed", error=f"{type(exc).__name__}: {exc}"[:300])
 
         threading.Thread(target=work, daemon=True).start()
 

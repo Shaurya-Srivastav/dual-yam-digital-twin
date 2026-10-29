@@ -1,12 +1,8 @@
-"""One driver for both worlds: `SimYam` speaks i2rt's `Robot` protocol on top of the MuJoCo plant.
+"""`SimYam` speaks i2rt's `Robot` protocol on top of the MuJoCo plant.
 
-    robot = get_robot("cup", hardware=False)            # the twin
-    robot = get_robot("cup", hardware=True, channel="can0")   # the real arm, at half speed on first runs
+    robot = get_robot("cup")
 
-Both return an object with the same methods (`get_joint_pos`, `command_joint_pos`, `get_observations`, ...), so a skill or a test
-trajectory written against the protocol runs unchanged on either. `python -m sim_station.sim_robot --hardware` plays three
-standard test trajectories on the twin and, when the arms are connected, on the hardware, and prints how far apart the
-tracking errors are: the numbers to fit friction and gravity factors against once the Pi is back.
+`hardware=True` raises unless the environment variable SIM_ALLOW_HARDWARE is set to 1. This tree does not start the real arms.
 """
 
 from __future__ import annotations
@@ -138,9 +134,11 @@ class SpeedLimited:
 
 
 def get_robot(arm: str = "cup", hardware: bool = False, channel: Optional[str] = None, plant: Optional[Plant] = None, speed_scale: float = 0.5):
-    """The same call for both worlds. Hardware needs the i2rt package and the CAN interface."""
+    """The simulator by default. The real arm is not part of this project and stays off unless SIM_ALLOW_HARDWARE=1."""
     if not hardware:
         return SimYam(plant, arm)
+    if os.environ.get("SIM_ALLOW_HARDWARE") != "1":
+        raise RuntimeError("hardware motion is disabled. This project does not start the real arms.")
     sys.path.insert(0, os.environ.get("I2RT_PATH", "third_party/i2rt"))
     from i2rt.robots.get_robot import get_yam_robot            # noqa: E402
 

@@ -14,7 +14,7 @@ Project page: https://dual-yam-digital-twin.netlify.app
 
 | Part | Where | What it does |
 |---|---|---|
-| Calibration | `sim_station/layout.py` | Every measured number: base poses, object poses per level, gripper map, force caps, speed limits, the real taught Level 1/2 waypoints |
+| Calibration | `sim_station/layout.py` | Scene numbers in one place. Provenance is in `docs/ASSUMPTIONS.md`. Includes the recorded Level 1 and Level 2 waypoints |
 | World | `scene.py`, `plant.py` | MuJoCo scene (hollow stave cups, nested stack, passive 360° lever with a lift hinge, funnel coaster), MIT-style PD control with gravity feed-forward, noisy sensors, contact referee |
 | Sensing | `sensing.py` | Contact force from torque residuals: `F = -pinv(Jᵀ)(τ - τ_gravity - τ_friction)` |
 | Motion | `kin.py`, `motion.py` | Strict mink IK, min-jerk synchronized trajectories, Cartesian lines |
@@ -23,7 +23,7 @@ Project page: https://dual-yam-digital-twin.netlify.app
 | Proofs | `proofs.py`, `evaluate.py`, `selftest.py` | Real-data replay, IK vs real poses, Monte Carlo with a failure histogram |
 | Live twin | `station.py`, `server.py`, `static/index.html` | 40+ fps JPEG stream, view cube, timeline with scrub, telemetry, Monte Carlo, Dance Mode |
 | Dance | `audio.py`, `dance.py` | Beat tracking of your own audio files and beat-locked choreography |
-| Hardware seam | `sim_robot.py` | `SimYam` implements i2rt's `Robot` protocol so the same driver runs on the twin or on `get_yam_robot` |
+| Simulator driver | `sim_robot.py` | `SimYam` implements the same method names as i2rt's robot object. `hardware=True` raises unless `SIM_ALLOW_HARDWARE=1`. This repo does not start the arms |
 
 ## Run it
 
@@ -60,8 +60,11 @@ See [docs/RESULTS.md](docs/RESULTS.md). Short version: the nominal (no randomiza
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): control loop, sensing, skills, referee
 - [docs/RESULTS.md](docs/RESULTS.md): measured numbers and open problems
 - [docs/STATUS.md](docs/STATUS.md): which claims are measured, simulated, or not run
+- [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md): which numbers were recorded, derived, assumed, or fitted
+- [docs/progress.md](docs/progress.md): which offline-brief items have a command and an exit code
 - [docs/FRONTIER_ROADMAP.md](docs/FRONTIER_ROADMAP.md): what is still open, in order
 - [docs/RESEARCH.md](docs/RESEARCH.md): the literature behind the search and flip methods
+- [docs/ABSTRACT.md](docs/ABSTRACT.md), [docs/QA.md](docs/QA.md), [docs/COMMANDS.md](docs/COMMANDS.md), [docs/LICENSES.md](docs/LICENSES.md)
 
 The twin does not use cameras anywhere. Skills never read true object poses; only the referee (`runner.check_pass`) and the debug overlay do.
 

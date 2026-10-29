@@ -17,6 +17,8 @@ import numpy as np
 
 from sim_station import layout as L
 from sim_station import motion as M
+from sim_station.collision_policy import still_leaving
+from sim_station.schedule import lanes_allow
 from sim_station.kin import ArmKin, frame_from, rot_about
 from sim_station.motion import PlanError, Traj
 from sim_station.plant import ARMS, Plant
@@ -200,13 +202,16 @@ class Ctx:
         # contacts already present where the path begins are what we are leaving, not what we would run into
         scene = self.collision_scene()
         leaving = {tuple(sorted(h)) for h in self.plant.collisions_for({arm: traj.q[0], other: qo}, {arm: w, other: self.width(other)}, scene)}
+        active = set(leaving)
         for k in list(range(k0, len(traj), step)) + [len(traj) - 1]:
             hits = self.plant.collisions_for({arm: traj.q[k], other: qo}, {arm: w, other: self.width(other)}, scene)
-            hits = [h for h in hits if not self._benign(h) and tuple(sorted(h)) not in leaving]
-            if hits:
-                raise PlanError(f"{arm} arm path collides at {k * traj.dt:.2f}s: {hits[0][0]} / {hits[0][1]}")
+            present = {tuple(sorted(h)) for h in hits}
+            bad = [h for h in hits if not self._benign(h) and tuple(sorted(h)) not in active]
+            if bad:
+                raise PlanError(f"{arm} arm path collides at {k * traj.dt:.2f}s: {bad[0][0]} / {bad[0][1]}")
             if arm == "cup" and self.bel.cup_in_hand and self.plant.held_cup_hits_dispenser(traj.q[k], w):
                 raise PlanError(f"the held cup would bump the valve or the tank at {k * traj.dt:.2f}s")
+            active = still_leaving(active, present)
 
     @staticmethod
     def _benign(pair: Tuple[str, str]) -> bool:
@@ -326,10 +331,39 @@ class StepDef:
     check: str = ""
 
 
+def validate_steps(steps: List[StepDef]) -> None:
+    """Reject a task graph with a duplicate id, a missing dependency, or a cycle. Called before any step runs."""
+    ids = [s.id for s in steps]
+    if len(ids) != len(set(ids)):
+        dup = [i for i in ids if ids.count(i) > 1]
+        raise ValueError(f"duplicate step id: {sorted(set(dup))[0]}")
+    known = set(ids)
+    by_id = {s.id: s for s in steps}
+    for s in steps:
+        for dep in s.deps:
+            if dep not in known:
+                raise ValueError(f"{s.id} depends on {dep}, which is not a step")
+    color = {i: 0 for i in ids}
+
+    def visit(i: str) -> None:
+        color[i] = 1
+        for dep in by_id[i].deps:
+            if color[dep] == 1:
+                raise ValueError(f"step graph has a cycle through {i}")
+            if color[dep] == 0:
+                visit(dep)
+        color[i] = 2
+
+    for i in ids:
+        if color[i] == 0:
+            visit(i)
+
+
 class Executor:
     """Runs a step graph. Statuses: waiting, running, done, failed."""
 
     def __init__(self, ctx: Ctx, steps: List[StepDef]) -> None:
+        validate_steps(steps)
         self.ctx = ctx
         self.steps = steps
         self.by_id = {s.id: s for s in steps}
@@ -362,9 +396,10 @@ class Executor:
             return False
         if not all(d in done or (self.only is not None) for d in s.deps):
             return False
-        if s.arm is not None and self.lane.get(s.arm) is not None:
-            return False
-        return True
+        return lanes_allow(s.arm, self.lane, self._global_running())
+
+    def _global_running(self) -> bool:
+        return any(self.status[s.id] == "running" and s.arm is None for s in self.steps)
 
     def start_step(self, s: StepDef) -> None:
         self.status[s.id] = "running"

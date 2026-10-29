@@ -1066,17 +1066,8 @@ def s_flip_lift(ctx: Ctx):
     def on_tick(k: int) -> None:
         if note or ctx.mon["cup"].grip_force >= 4.0:
             return
-        cs = ctx.plant.cup_state()
-        names = []
-        d, m = ctx.plant.data, ctx.plant.model
-        for i in range(d.ncon):
-            c = d.contact[i]
-            n1, n2 = m.geom(int(c.geom1)).name, m.geom(int(c.geom2)).name
-            blob = n1 + n2
-            if "rest" in blob or "paper" in blob or "plastic" in blob:
-                names.append(n1 + "/" + n2)
-        note["s"] = (f"grip fell at tcp z {ctx.tcp('cup')[2, 3]:.3f}, cup {[round(float(v), 3) for v in cs['xyz']]} "
-                     f"up {cs['up']:.2f}, contacts {names[:3]}")
+        # gripper effort and the hand pose only; the cup's true pose is the referee's
+        note["s"] = f"grip {ctx.mon['cup'].grip_force:.2f} N at tcp z {float(ctx.tcp('cup')[2, 3]):.3f}"
 
     yield from ctx.play("cup", traj, on_tick=on_tick)
     yield from ctx.wait(0.25)

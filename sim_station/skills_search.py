@@ -12,6 +12,7 @@ import numpy as np
 
 from sim_station import layout as L
 from sim_station import motion as M
+from sim_station.beliefgeom import feasible_region
 from sim_station.kin import frame_from, rot_about
 from sim_station.motion import PlanError
 from sim_station.runtime import CTRL_STEPS, Ctx, SkillFault
@@ -323,6 +324,8 @@ def s_fit_cup(ctx: Ctx, near: np.ndarray, max_pecks: int = 8):
     if not any(pk["occupied"] for pk in ctx.scratch["peck_log"]):
         raise SkillFault("no peck around the coarse hit stopped high: nothing to fit")
     c, viol, spread = fit_cup_position(ctx, near)
+    region = feasible_region(cand)
+    ctx.scratch["feasible_radius_m"] = region["radius_m"]
     ctx.event(f"fit: cup at ({c[0]:.3f}, {c[1]:.3f}), {viol} contradicting pecks, feasible set radius {spread * 1000:.0f} mm")
     ctx.bel.cup_xy = c
     ctx.scratch["fit_xy"] = c.copy()

@@ -1,5 +1,16 @@
 # Architecture
 
+```mermaid
+flowchart LR
+  skills[Skills and task graph] --> obs[Joint and gripper observations]
+  obs --> plant[MuJoCo plant]
+  skills --> planner[Planner on the belief]
+  plant --> referee[Referee reads true poses]
+  referee --> score[Pass or fail]
+```
+
+The skills do not read the referee's poses. The planner places the cup, stack, coaster and lever from the belief. The pour is a timer.
+
 **Control loop.** `Plant` steps MuJoCo at 1 kHz. Each arm is a position actuator emulating the real MIT-mode law: `τ = kp(q*-q) + kd(q̇*-q̇) + gravity·factor`, with the feed-forward folded into the position target. Gains, gravity factors, friction, mass, base pose, sensor noise and command delay are randomized per trial (`Randomization.draw`). At power-up the runner holds two loaded poses and fits per-joint gravity feed-forward corrections from the position sag (`Session.calibrate_gravity`).
 
 **Sensing.** Skills see encoders (q, q̇), motor torque, gripper width and effort, all with noise. `ContactMonitor` subtracts the controller's own gravity model and Coulomb friction from the motor torque and maps the residual to a Cartesian force with `-pinv(Jᵀ)`. Guards use force steps (`delta_force`) or a baseline-relative threshold, never a true contact flag.

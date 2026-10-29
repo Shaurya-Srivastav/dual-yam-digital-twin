@@ -11,9 +11,12 @@ import multiprocessing as mp
 import os
 import time
 from collections import Counter
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import numpy as np
+
+from sim_station.jsonsafe import json_ready
 
 TARGETS = {1: 0.98, 2: 0.98, 3: 0.95, 4: 0.95, 5: 0.90}
 
@@ -83,6 +86,19 @@ def summarize(results: List[dict]) -> dict:
     )
 
 
+def write_report(path: str, allres: Dict[int, dict]) -> None:
+    """Strict JSON summary plus one JSONL row per trial. NaN becomes null."""
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    clean = json_ready(allres)
+    dest.write_text(json.dumps(clean, allow_nan=False, indent=1))
+    rows = dest.with_suffix(".jsonl")
+    with rows.open("w") as fh:
+        for block in clean.values():
+            for row in block.get("results") or []:
+                fh.write(json.dumps(row, allow_nan=False) + "\n")
+
+
 def run_level(level: int, trials: int, jobs: int, material: str = "paper", seed0: int = 0, progress=None) -> dict:
     tasks = [(level, seed0 + i, ("plastic" if (i % 4 == 3) else material)) for i in range(trials)]
     results: List[dict] = []
@@ -126,8 +142,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         for reason, n in out["failure_reasons"]:
             print(f"    {n:3d} x {reason}")
     if a.json:
-        with open(a.json, "w") as fh:
-            json.dump(allres, fh, default=float, indent=1)
+        write_report(a.json, allres)
 
 
 if __name__ == "__main__":

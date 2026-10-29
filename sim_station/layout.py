@@ -1,16 +1,13 @@
-"""Single source of truth for station geometry, calibration, physics parameters,
-real Raspberry Pi taught waypoints, and level configurations.
+"""Single source of truth for station geometry, physics parameters, recorded waypoints, and level configurations.
 
-Everything that is a *measured number* lives here. The scene (`scene.py`), the
-plant (`plant.py`), the controller/skills and the evaluation suite all read from
-this module so there is exactly one place to correct a calibration.
+The numbers live here so the scene, the plant and the skills cannot drift apart. Which of them were recorded,
+derived, assumed or fitted is listed in `assumptions.py` and `docs/ASSUMPTIONS.md`. This file is not a new survey.
 
 Frames
 ------
 World: +x forward from the T-slot rail across the mat, +y to the left, +z up,
 mat surface at z = MAT_SURFACE_Z, table top at z = 0.
-Both arm bases sit on the rail at x = 0.06, yaw 0. All "cup frame" numbers are
-the Pi's forward-kinematics outputs in the cup arm's base frame.
+Both arm bases sit on the rail at x = 0.06, yaw 0. Cup-frame numbers are expressed in the cup arm's base frame.
 """
 
 from __future__ import annotations

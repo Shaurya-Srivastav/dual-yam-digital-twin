@@ -1,0 +1,26 @@
+[project]
+name = "dual-yam-digital-twin"
+version = "0.1.0"
+description = "Simulation-only digital twin of a two-arm cup and dispenser station"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "mujoco>=3.1",
+  "numpy",
+  "scipy",
+  "pillow",
+  "fastapi",
+  "uvicorn",
+  "websockets",
+  "pydantic",
+  "mink",
+  "qpsolvers[quadprog]",
+  "dm-env",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

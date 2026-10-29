@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dual-YAM digital twin</title>
-<meta name="description" content="A MuJoCo digital twin of a two-arm water-cup station. Blind, contact-driven skills, five levels, real-data replay, Monte Carlo evaluation and a beat-synced dance mode.">
+<meta name="description" content="A MuJoCo simulation of a two-arm cup station. Skills use joint torque and gripper width only. The pour is a timer. Nothing on this page has run on the physical arms.">
 <meta property="og:title" content="Dual-YAM digital twin">
 <meta property="og:description" content="Two robot arms, one dry dispenser, five levels of uncertainty, no cameras.">
 <style>
@@ -52,7 +52,7 @@ footer{max-width:1120px;margin:80px auto 0;padding:24px 20px 60px;border-top:1px
 
 <section style="padding-top:64px">
   <h1>Two arms. One dry dispenser.<br><span style="color:var(--acc)">No cameras.</span></h1>
-  <p class="lead">A MuJoCo digital twin of a two-arm (I2RT YAM) water-cup station. One arm brings a paper or plastic cup under the spout, the other lifts a 360° lever for a 7-second pour, and the cup is served into a coaster. Every skill works from what real motors report: joint position, velocity, torque and gripper width.</p>
+  <p class="lead">A MuJoCo simulation of a two-arm (I2RT YAM) cup station. One arm brings a paper or plastic cup under the spout, the other lifts a 360° lever, and a timer counts 7 seconds. No water is in the model. The cup is then served into a coaster. Skills read joint position, velocity, torque and gripper width. Nothing on this page has been run on the physical arms.</p>
   <a class="btn p" href="#levels">Watch the five levels</a><a class="btn" href="https://github.com/Shaurya-Srivastav/dual-yam-digital-twin">Source code</a><a class="btn" href="#run">Run the live dashboard</a>
   <div class="chips"><span class="chip">MuJoCo 3</span><span class="chip">MIT-mode PD + gravity feed-forward</span><span class="chip">torque-residual contact sensing</span><span class="chip">mink IK</span><span class="chip">set-membership cup localisation</span><span class="chip">beat tracking</span><span class="chip">Monte Carlo referee</span></div>
 </section>

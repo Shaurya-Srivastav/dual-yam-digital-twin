@@ -1,6 +1,6 @@
 # Scope
 
-This repository is a simulation-only benchmark. The work in `docs/progress.md` does not use a robot, a CAN bus, a Raspberry Pi, or any new physical measurement.
+This repository is a simulation-only benchmark. The work in `docs/progress.md` does not use a robot, a CAN bus, a Raspberry Pi, or any new physical measurement. `get_robot(..., hardware=True)` raises unless `SIM_ALLOW_HARDWARE=1`. That variable is not set by the tests.
 
 Dimensions in `sim_station/layout.py` stay as they are. The 76 mm rim is the nominal model. An earlier note of about 90 mm is an unmeasured alternative, not a number to silently substitute. The tap-base offset, dish radii and valve shape are assumptions carried by the existing scene. Where a real value is missing, the result is marked not verified on hardware.
 

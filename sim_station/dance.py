@@ -109,6 +109,7 @@ STYLE_PLAN = {                       # eight-beat phrases, in the order they com
     "aha": ["wave", "circle", "sway", "wave", "circle", "sway", "pump", "point"],
     "disco": ["point", "pump", "point", "clap", "sway", "point", "pump", "circle"],
     "free": ["sway", "pump", "wave", "circle"],
+    "click": ["sway", "pump", "wave", "circle"],
 }
 
 

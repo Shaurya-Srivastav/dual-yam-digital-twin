@@ -16,12 +16,24 @@ from sim_station.kin import ArmKin
 from sim_station.plant import ArmObs, Plant
 
 
+def world_force_from_tau(Jp: np.ndarray, tau_ext: np.ndarray, R_wb: np.ndarray) -> np.ndarray:
+    """World force from a joint torque residual. A positive residual maps to a force into the hand."""
+    A = Jp @ Jp.T + 1e-3 * np.eye(3)
+    return -(np.asarray(R_wb, dtype=float) @ np.linalg.solve(A, Jp @ tau_ext))
+
+
+def jacobian_reliable(Jp: np.ndarray, min_sigma: float = 0.02) -> bool:
+    singular = np.linalg.svd(np.asarray(Jp, dtype=float), compute_uv=False)
+    return bool(singular.size) and float(singular.min()) >= min_sigma
+
+
 class ContactMonitor:
     def __init__(self, arm: str, plant: Plant, kin: ArmKin, cutoff_hz: float = 22.0, dt: float = L.CONTROL_DT) -> None:
         self.arm, self.plant, self.kin = arm, plant, kin
         self.alpha = dt / (1.0 / (2.0 * np.pi * cutoff_hz) + dt)
         self.tau_ext = np.zeros(6)
         self.force = np.zeros(3)           # world-frame force estimate at the TCP (N)
+        self.force_reliable = False
         self.moment = np.zeros(3)
         self.q = np.zeros(6)
         self.qd = np.zeros(6)
@@ -53,10 +65,10 @@ class ContactMonitor:
             self.tcp = self.kin.fk(obs.q)
             J = self.kin.jacobian(obs.q)
             Jp = J[:3]
-            A = Jp @ Jp.T + 1e-3 * np.eye(3)
             # tau_ext = motor torque - gravity torque = -J^T F_env at equilibrium, so the force the world puts on the hand
             # is the negative of the least-squares solution. The Jacobian lives in the arm base frame.
-            self.force = -(self.kin.R_wb @ np.linalg.solve(A, Jp @ self.tau_ext))
+            self.force = world_force_from_tau(Jp, self.tau_ext, self.kin.R_wb)
+            self.force_reliable = jacobian_reliable(Jp)
             self.fbuf.append(self.force.copy())
 
     def delta_force(self, ticks: int = 25) -> np.ndarray:

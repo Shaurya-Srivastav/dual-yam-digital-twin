@@ -95,7 +95,7 @@ a{color:var(--acc)}
 <body>
 <div id="app">
   <header>
-    <h1>Dual-YAM digital twin</h1><span class="sub">cup arm <b style="color:var(--cup)">●</b> &nbsp;tap arm <b style="color:var(--tap)">●</b></span>
+    <h1>Dual-YAM digital twin</h1><span class="sub">simulation render · cup arm <b style="color:var(--cup)">●</b> &nbsp;tap arm <b style="color:var(--tap)">●</b> &nbsp; truth overlay is the orange marker</span>
     <span class="spacer"></span>
     <span class="mono muted" id="clock">t 0.0 s</span>
     <span class="mono muted" id="perf"></span>
@@ -360,7 +360,7 @@ function render() {
   // pour ring
   const p = S.pour, frac = Math.min(p.flow_s / p.target_s, 1); $("ringArc").setAttribute("stroke-dasharray", `${(frac * 264).toFixed(1)} 264`);
   $("ringArc").setAttribute("stroke", p.flowing ? "#4fb3ff" : (frac >= 1 ? "#4cd08a" : "#5b6785")); $("ringTxt").textContent = fmt(p.flow_s, 1);
-  $("pourBig").textContent = `Pour ${fmt(p.flow_s, 1)} / ${fmt(p.target_s, 1)} s`; $("pourSmall").textContent = `handle ${fmt(p.lever_deg, 0)}° · ${p.flowing ? "water flowing" : "closed"}`;
+  $("pourBig").textContent = `Pour ${fmt(p.flow_s, 1)} / ${fmt(p.target_s, 1)} s`; $("pourSmall").textContent = `handle ${fmt(p.lever_deg, 0)}° · ${p.flowing ? "open, dry timer" : "closed"}`;
   $("progressTxt").textContent = `${Math.round(S.progress * 100)}% of steps done`;
   // timeline
   const groups = {}; S.steps.forEach(s => (groups[s.group] = groups[s.group] || []).push(s));

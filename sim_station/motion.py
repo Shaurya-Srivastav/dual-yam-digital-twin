@@ -12,6 +12,7 @@ from scipy.interpolate import CubicSpline
 
 from sim_station import layout as L
 from sim_station.kin import ArmKin, rot_error
+from sim_station.pathcheck import PathSpecError, cartesian_waypoints
 
 
 class PlanError(RuntimeError):
@@ -125,6 +126,10 @@ def cart_path(kin: ArmKin, poses: Sequence[np.ndarray], q_seed: np.ndarray, step
     """Dense joint path following a poly-line of world TCP poses (straight lines, slerped orientation).
 
     Returns (u grid, joint path, cartesian length)."""
+    try:
+        poses = cartesian_waypoints(poses)
+    except PathSpecError as exc:
+        raise PlanError(str(exc)) from exc
     pts: List[np.ndarray] = []
     for a, b in zip(poses[:-1], poses[1:]):
         L_t = float(np.linalg.norm(b[:3, 3] - a[:3, 3]))

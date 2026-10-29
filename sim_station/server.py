@@ -10,8 +10,10 @@ from typing import List, Optional
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from sim_station import audio as A
+from sim_station.api_checks import check_camera, check_pick, check_reset, check_song, check_speed, check_trials
+from sim_station.jsonsafe import json_ready
 from pydantic import BaseModel
 
 from sim_station.station import Station
@@ -84,8 +86,12 @@ def index() -> FileResponse:
 @app.get("/audio/{sid}")
 def audio_file(sid: str):
     meta = A.SONGS.get(sid)
-    path = A.ASSETS / meta["file"] if meta else None
-    if path is None or not path.exists():
+    if meta is None:
+        return JSONResponse({"error": "no such song"}, status_code=404)
+    if meta.get("generated"):
+        return Response(content=A.wav_bytes(A.click_track()), media_type="audio/wav")
+    path = A.ASSETS / meta["file"]
+    if not path.is_file():
         return JSONResponse({"error": "no such song"}, status_code=404)
     return FileResponse(path, media_type="audio/mpeg")
 
@@ -95,8 +101,16 @@ def state() -> dict:
     return st().snapshot()
 
 
+def _bad(exc: ValueError) -> JSONResponse:
+    return JSONResponse({"ok": False, "error": str(exc)}, status_code=422)
+
+
 @app.post("/api/reset")
-def reset(r: ResetReq) -> dict:
+def reset(r: ResetReq):
+    try:
+        check_reset(r.level, r.material, r.seed)
+    except ValueError as exc:
+        return _bad(exc)
     st().reset(r.level, r.material, r.seed, r.randomize)
     return {"ok": True}
 
@@ -126,7 +140,11 @@ def abort() -> dict:
 
 
 @app.post("/api/speed")
-def speed(r: SpeedReq) -> dict:
+def speed(r: SpeedReq):
+    try:
+        check_speed(r.speed)
+    except ValueError as exc:
+        return _bad(exc)
     st().set_speed(r.speed)
     return {"ok": True}
 
@@ -137,32 +155,48 @@ def scrub(r: ScrubReq) -> dict:
 
 
 @app.post("/api/camera")
-def camera(r: CamReq) -> dict:
+def camera(r: CamReq):
+    try:
+        check_camera(r.az, r.el, r.dist, r.lookat)
+    except ValueError as exc:
+        return _bad(exc)
     st().set_camera(**{k: v for k, v in r.model_dump().items() if v is not None})
     return {"ok": True}
 
 
 @app.post("/api/pick")
-def pick(r: PickReq) -> dict:
+def pick(r: PickReq):
+    try:
+        check_pick(r.x, r.y)
+    except ValueError as exc:
+        return _bad(exc)
     return {"point": st().pick(r.x, r.y)}
 
 
 @app.post("/api/montecarlo")
-def montecarlo(r: MCReq) -> dict:
-    st().start_montecarlo(r.levels, max(2, min(r.trials, 200)))
+def montecarlo(r: MCReq):
+    try:
+        check_trials(r.levels, r.trials)
+    except ValueError as exc:
+        return _bad(exc)
+    st().start_montecarlo(r.levels, r.trials)
     return {"ok": True}
 
 
 @app.post("/api/proof/{kind}")
 def proof(kind: str) -> dict:
     if kind not in ("replay", "equivalence"):
-        return {"ok": False}
+        return JSONResponse({"ok": False, "error": "unknown proof"}, status_code=422)
     st().start_proof(kind)
     return {"ok": True}
 
 
 @app.post("/api/dance/start")
-def dance_start(r: DanceReq) -> dict:
+def dance_start(r: DanceReq):
+    try:
+        check_song(r.song, tuple(A.SONGS))
+    except ValueError as exc:
+        return _bad(exc)
     st().dance_start(r.song)
     return {"ok": True}
 
@@ -201,7 +235,7 @@ async def ws(sock: WebSocket) -> None:
             n += 1
             if n % 8 == 0:
                 snap = await asyncio.get_running_loop().run_in_executor(None, S.snapshot)
-                await sock.send_text(json.dumps(snap, default=float))
+                await sock.send_text(json.dumps(json_ready(snap), allow_nan=False))
             await asyncio.sleep(0.012)
 
     async def receiver() -> None:

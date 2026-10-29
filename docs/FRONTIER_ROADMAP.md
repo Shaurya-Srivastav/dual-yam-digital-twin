@@ -28,7 +28,7 @@ This is the work order. Later phases (imitation learning, reinforcement learning
 
 ## Do not start yet
 
-Behavior cloning, residual RL, active-sensing papers, and any `get_yam_robot` motion. Dance Mode stays a local optional. The beat-tracker line `if cand[k] > 0 or True` in `audio.py` is a real bug and is still there; it is not in this gate.
+Behavior cloning, residual RL, active-sensing training, and any `get_yam_robot` motion. Dance Mode stays a local optional. The beat-tracker branch that was `if cand[k] > 0 or True` now takes the best finite predecessor. `tests/test_numerics.py` covers a click track and silence.
 
 ## Exit for the next change
 

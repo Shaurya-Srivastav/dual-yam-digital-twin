@@ -20,6 +20,7 @@ import numpy as np
 
 from sim_station import layout as L
 from sim_station import scene
+from sim_station.collision_policy import FATAL_CONTACT
 
 warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*matmul.*")
 
@@ -177,6 +178,7 @@ class Plant:
         self.kp = {a: L.KP_ARM.copy() for a in ARMS}
         self.grav_adapt = {a: np.ones(6) for a in ARMS}
         self.stack_is_obstacle = True       # the stack stands on the coaster, off the spout corridor; links and housing must go around it
+        self.stack_assist = True            # synthetic upright torque; set False for the no-assist ablation. Default stays on.
         self.kd = {a: L.KD_ARM.copy() for a in ARMS}
         self.friction_comp = False
         self._grav = {a: np.zeros(6) for a in ARMS}
@@ -438,8 +440,9 @@ class Plant:
     STACK_UPRIGHT_C = 0.08         # N m s/rad
 
     def _stabilize_stacks(self) -> None:
-        """A stack of cups must never fall over: a restoring torque about its centre keeps it upright (it can still be pushed
-        across the mat, and it still tilts a few degrees under a push)."""
+        """Synthetic upright torque on a standing stack. Off when stack_assist is false. Not a measured support model."""
+        if not self.stack_assist:
+            return
         m, d = self.model, self.data
         for name in ("paper_rest", "plastic_rest"):
             b = self.body[name]
@@ -531,7 +534,7 @@ class Plant:
                                                             b=mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_GEOM, b))
 
     def fatal_violations(self) -> list:
-        return [v for v in self.violations.values() if v["kind"] in ("arm_arm", "arm_dispenser", "arm_table", "cup_dispenser", "arm_stack")]
+        return [v for v in self.violations.values() if v["kind"] in FATAL_CONTACT]
 
     def run_time(self, seconds: float, control_cb=None) -> None:
         steps = int(round(seconds / self.dt))

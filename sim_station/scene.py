@@ -1,7 +1,7 @@
-"""MuJoCo digital twin of the dual-YAM water-cup station.
+"""MuJoCo scene for the dual-YAM cup station.
 
-Every measured number comes from `layout.py`. This module only turns those numbers
-into an MJCF model:
+Geometry comes from `layout.py`. Provenance of those numbers is in `docs/ASSUMPTIONS.md`.
+This module turns them into an MJCF model:
 
 * both YAM arms (vendor geometry and inertias, torque-limited joints with rotor
   inertia, friction and viscous damping),
@@ -28,6 +28,7 @@ from PIL import Image, ImageDraw
 
 from i2rt.robots.utils import ArmType, GripperType, combine_arm_and_gripper_xml
 from sim_station import layout as L
+from sim_station.physics_manifest import OPTION as PHYSICS_OPTION
 
 warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*matmul.*")
 
@@ -499,8 +500,7 @@ def build_xml() -> str:
     _ensure_assets()
     root = ET.Element("mujoco", {"model": "watercup_station"})
     E(root, "compiler", angle="radian", meshdir=ASSET_DIR, autolimits="true")
-    E(root, "option", timestep=0.001, gravity="0 0 -9.81", integrator="implicitfast", cone="elliptic",
-      impratio=8, solver="Newton", iterations=40, tolerance=1e-9, noslip_iterations=3, noslip_tolerance=1e-7)
+    E(root, "option", **PHYSICS_OPTION)
     E(root, "size", memory="64M")
     visual = E(root, "visual")
     E(visual, "global", offwidth=1920, offheight=1200)
