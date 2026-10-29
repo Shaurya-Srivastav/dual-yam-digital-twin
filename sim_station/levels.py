@@ -50,7 +50,7 @@ def serve_steps(ctx: Ctx, prefix: str, after: str, seat_z: float, tap_after=()) 
         _step(f"{p}cup.retreat", "Back the hand out clear", "Serve", "cup", [f"{p}cup.release"],
               lambda c: S.s_retreat(c), "moved away along the approach axis"),
         _step(f"{p}cup.rest", "Cup arm: return to rest", "Serve", "cup", [f"{p}cup.retreat"],
-              lambda c: S.s_goto_rest(c, "cup"), "folded"),
+              lambda c: S.s_rest_over_cup(c), "folded"),
         _step(f"{p}tap.rest", "Tap arm: return to rest", "Serve", "tap", [f"{p}tap.release"],
               lambda c: S.s_goto_rest(c, "tap"), "folded"),
     ]
@@ -116,19 +116,26 @@ def build_level(level: int, ctx: Ctx) -> List[StepDef]:
         steps += serve_steps(ctx, "", "cup.flip_lift", seat, tap_after=("cup.flip_lift",))
         return steps
     if level == 4:
-        steps = pick_upright(ctx, "", ctx.bel.cup_xy, seat) + serve_steps(ctx, "", "cup.lift", seat, tap_after=("tap.search",))
+        # The tap arm walks the whole circle of the valve. The cup arm stays folded until that walk is
+        # finished, which is what keeps the two arms from meeting over the mat.
+        steps = pick_upright(ctx, "", ctx.bel.cup_xy, seat, first_deps=("tap.search",)) + serve_steps(ctx, "", "cup.lift", seat, tap_after=("tap.search",))
         steps.insert(0, _step("tap.search", "Tap arm: close on the knob, then walk the circle to find the handle", "Pour", "tap", [],
-                              lambda c: S3.s_lever_search(c), "a close past the knob that stalls has the radius; behind the tank, a fingertip finds it"))
+                              lambda c: S3.s_lever_search(c), "a close that stalls at 15 mm has the paddle; the dispenser is not pushed"))
         return steps
     if level == 5:
         steps = [
-            _step("cup.stamp", "Cup arm: open the hand into a flat stamp", "Pick", "cup", [], lambda c: S3.s_open_stamp(c), "jaws spread"),
-            _step("cup.scan", "Cup arm: stamp a coarse grid until something stands up", "Pick", "cup", ["cup.stamp"],
-                  lambda c: S3.s_scan_mat(c), "open pads, stop heights read from torque"),
-            _step("cup.find", "Cup arm: peck the cup's edges to fit its centre", "Pick", "cup", ["cup.scan"],
-                  lambda c: S3.s_fit_cup(c, c.bel.found["coarse_hit"]), "set-membership fit of the stop heights"),
+            _step("cup.stamp", "Left arm: open the gripper flat", "Pick", "cup", [],
+                  lambda c: S3.s_flat_hand(c, "cup"), "jaws open, black pads parallel to the mat"),
+            _step("cup.scan", "Left arm: stomp its half of the mat", "Pick", "cup", ["cup.stamp"],
+                  lambda c: S3.s_scan_half(c, "cup"), "flat black pads, then the centre of the patch that stood up"),
+            _step("tap.stamp", "Right arm: open the gripper flat", "Pick", "tap", ["cup.scan"],
+                  lambda c: S3.s_flat_hand(c, "tap"), "starts only after the left arm has folded clear"),
+            _step("tap.scan", "Right arm: stomp its half of the mat", "Pick", "tap", ["tap.stamp"],
+                  lambda c: S3.s_scan_right(c), "the other half; the arms do not cross"),
         ]
-        steps += pick_upright(ctx, "", lambda c: c.bel.cup_xy, L.MAT_SURFACE_Z, first_deps=("cup.find",))
-        steps += serve_steps(ctx, "", "cup.lift", seat)
+        steps += pick_upright(ctx, "", lambda c: c.bel.cup_xy, L.MAT_SURFACE_Z, first_deps=("tap.scan",))
+        # The tap arm stays folded until the cup is in the hand. Moving it to the lever during the stomp
+        # is how the two arms met.
+        steps += serve_steps(ctx, "", "cup.lift", seat, tap_after=("cup.lift",))
         return steps
     raise ValueError(f"level {level} not built yet")

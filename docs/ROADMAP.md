@@ -2,11 +2,11 @@
 
 Ordered by what blocks the most. Rates are from [RESULTS.md](RESULTS.md).
 
-1. **Coaster centring (Levels 1-4).** The coaster is jittered up to 8 mm in randomized trials and the skills only know its nominal spot. The dish leaves about 2 cm of slack around the cup base (needed by the real replay), so it does not centre the cup. Next: localise the coaster by touch before the serve (a peck on its rim, not a slide of the held cup, which was tried and made it worse), or measure the real dish and tighten it.
-2. **Level 4 dispenser creep and lever lift.** Parking the handle pushes the dispenser past 2 mm on 7 of 24 draws; a stiffer tape model fixed that but broke the Level 1 close timing. The lever lift's first IK step jumps 0.13 rad on 3 of 24. Next: a gentler park push, and a seeded first IK step for the lift.
-3. **Level 3 pin reachability.** No collision-free pin approach for some stack heights (5 of 24). Next: more pin approach azimuths and heights.
-4. **Level 5 scan.** A peck into the open mouth reads as empty mat. Next: model the mouth in the scan's candidate update without dropping hits elsewhere (the first attempt lowered the rate).
-5. **Grasp retries.** 1-2 of 24 per level close on nothing or stall on a 61-63 mm chord after nine attempts.
+1. **Cup centring after the flip (Levels 2 and 3).** The coaster is bolted. A cup in it may start ±2 mm off centre, and the dish does not pull a seated cup back inside 15 mm. Three seeds land past that line because the cup walks along the jaw during the carry and the jaw opening cams it farther. Pressing, sliding, and lowering before the open were tried and did not bring those seeds inside 15 mm.
+2. **Level 4, not rescored.** Handles near the pour angle can be squared at a 15 mm stall and parked with the dispenser under 2 mm in single-yaw checks. Handles on the far side of the tank are felt, and the short push that should turn them meets the tank or runs out of time. The old 8 % table used a fingertip sweep this tree no longer runs. A 24-trial on the current search has not been run.
+3. **Level 3 pin reachability.** No collision-free pin approach for three of 24 stack heights (seeds 17, 20, 21).
+4. **Level 5, not rescored on this pour.** The search is a flat-pad stomp, cup arm on +y and tap arm on −y. Earlier on 2026-10-29 that search passed 23 of 24, with one pad hitting the tank. The pour path changed after that run.
+5. **Grasp misses that remain.** Level 1 seed 22 closes on nothing at the handle. Level 2 and Level 3 seed 22 stall short of the top cup's middle band.
 6. **Not separate implementations yet:** torque actuators (the arms are position actuators with the MIT law in the command), bimanual zone locks, a `GripperForceLimiter` class, a particle-filter or expected-entropy Level 5 belief.
 7. **Calibration from the station photos.** The photos are not in the tree; tap base spacing, dish radius and spigot geometry are inferred, not measured.
 8. **Hardware.** Run `python -m sim_station.sim_robot --hardware` at half speed and fit friction and gravity factors against the twin's tracking error.

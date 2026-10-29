@@ -6,7 +6,7 @@
 
 **How is a run scored?** `runner.check_pass` reads the true poses after the motion. The cup must be within 10° of upright and 15 mm of the coaster centre. The lever must be open 7.0 ± 0.2 s with the cup under the outlet, and closed at the end. The dispenser must move less than 2 mm. Arm-arm, arm-dispenser, arm-table, cup-dispenser and arm-stack contacts fail the run. Levels 2 and 3 also require the remaining stack to be standing and untouched.
 
-**Why do the randomized runs fail?** The latest 24-trial table is 79 / 54 / 54 / 8 / 17 %. The common misses are the cup more than 15 mm from the coaster, the Level 4 dispenser creeping when the handle is pushed round, the Level 5 search pecking into the open mouth, and a grasp that closes on nothing.
+**Why do the randomized runs fail?** Levels 1–3, scored 2026-10-29, are 96 / 79 / 67 %. The cup still lands more than 15 mm from the bolted coaster on three Level 2 and Level 3 seeds, one Level 1 handle pinch closes on nothing, and Level 3 has no pin pose on three stacks. Levels 4 and 5 were not rescored on this commit.
 
 **Has this run on the robot?** No. `get_robot(..., hardware=True)` raises unless `SIM_ALLOW_HARDWARE=1`, and this project does not set that variable.
 

@@ -854,8 +854,9 @@ class Plant:
                 return np.asarray(xy, dtype=float)
             return np.asarray(xy, dtype=float) + self.rng.uniform(-jit, jit, 2)
 
-        # fixed furniture
-        m.body_pos[self.body["coaster"]] = [*j(lay.coaster_xy), L.MAT_SURFACE_Z]
+        # The dish is bolted to the mat. It does not jitter. A cup sitting in it may rest a couple of
+        # millimetres off the recess centre; the stack, which is not fastened, still gets object_jitter_xy.
+        m.body_pos[self.body["coaster"]] = [float(lay.coaster_xy[0]), float(lay.coaster_xy[1]), L.MAT_SURFACE_Z]
         self.dispenser_nominal = L.DISPENSER_XY.copy()
         d.qpos[self.yaw_q] = rand.lever_yaw if rand.lever_yaw is not None else L.LEVER_YAW_DEFAULT
         d.qpos[self.lever_q] = 0.0
@@ -888,7 +889,9 @@ class Plant:
             self._enable(self.active_cup)
             cxy = rand.cup_xy if (rand.cup_xy is not None and level == 5) else j(lay.cup_xy)
             if lay.cup_in_coaster:
-                cxy = m.body_pos[self.body["coaster"]][:2].copy()
+                cxy = np.asarray(lay.coaster_xy, dtype=float).copy()
+                if jit > 0:
+                    cxy = cxy + self.rng.uniform(-0.002, 0.002, size=2)
                 z = L.COASTER_FLOOR_Z + 0.5 * L.CUP_HEIGHT + 0.0006
             else:
                 z = L.MAT_SURFACE_Z + 0.5 * L.CUP_HEIGHT + 0.0006

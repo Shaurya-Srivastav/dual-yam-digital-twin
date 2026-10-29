@@ -1,11 +1,12 @@
-# Status (2026-10-28, commit under this file)
+# Status (2026-10-29)
 
 Simulation only. Nothing has run on the arms.
 
 | Claim | State |
 |---|---|
 | Nominal Levels 1–5, no randomization | Passing the strict referee on the selftest, as of the last run recorded in `docs/RESULTS.md`. Re-run `python -m sim_station.selftest` after any physics or skill change. |
-| Randomized, 24 trials | 79 / 54 / 54 / 8 / 17 % against targets 98 / 98 / 95 / 95 / 90 %. Not at target. |
+| Randomized, 24 trials, Levels 1–3 | 96 / 79 / 67 % against targets 98 / 98 / 95 %. Seeds 0–23, scored 2026-10-29 on this pour and place code. Not at target. |
+| Randomized, Levels 4 and 5 | Not scored on this commit. Level 4's last full table (8 %, 2026-10-28) used a fingertip sweep this tree no longer runs. Level 5's flat-hand search passed 23/24 earlier on 2026-10-29, before the later pour edits. |
 | Pose-aligned Level 1 replay | The cup is moved to the recorded grasp before playback. A pass is not independent proof of the station layout. |
 | Scene-as-reset replay | Same waypoints, cup left where the level reset put it. Latest selftest: fail, 105.7 mm from the outlet axis and 19.7 mm from the coaster centre. Printed, not part of the exit code. |
 | FK/IK check | This model's forward kinematics against its own inverse kinematics. Not a surveyed hand pose. |

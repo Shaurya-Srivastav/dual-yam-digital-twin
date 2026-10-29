@@ -18,17 +18,17 @@
 
 In Levels 2 and 3 one arm takes the top cup off the stack with its wrist rolled half a turn, then rolls back so the cup is upright in the pour grip. Nothing is handed over or set down. The stack stands on the coaster spot (as on the real station) and the referee's `stack_never_touched` and `arm_stack` checks pass.
 
-**Monte Carlo, 24 randomized trials per level** (`python -m sim_station.evaluate --trials 24 --seed0 0`; positions ±1 cm, coaster ±8 mm unknown to the skills, friction/mass ±25-30 %, gains ±10 %, base ±2 mm / 0.5°, noise, 2-5 tick delay, every fourth trial plastic, Level 3 stacks of 3 to 11 cups), on the code in this commit:
+**Monte Carlo, 24 randomized trials** (`python -m sim_station.evaluate --trials 24 --seed0 0`; positions ±1 cm, coaster bolted, a cup in the coaster ±2 mm, stacks ±8 mm, friction/mass ±25-30 %, gains ±10 %, base ±2 mm / 0.5°, noise, 2-5 tick delay, every fourth trial plastic, Level 3 stacks of 3 to 11 cups). Levels 1–3 below were scored on 2026-10-29 on the pour and place code in this commit. Levels 4 and 5 were not.
 
 | Level | Pass | Wilson 95 % | Target | Previous run | Main failures |
 |---|---|---|---|---|---|
-| 1 | 19/24, 79 % | 60-91 % | 98 % | 79 % | grasp missed (2), cup >15 mm from centre (2), forbidden contact (1) |
-| 2 | 13/24, 54 % | 35-72 % | 98 % | 42 % | cup >15 mm (5), pour timing (2), lever IK jump, no pin pose, forbidden contact, tilt (1 each) |
-| 3 | 13/24, 54 % | 35-72 % | 95 % | 42 % | no pin pose (5), cup >15 mm (4), forbidden contact (1), pour timing (1) |
-| 4 | 2/24, 8 % | 2-26 % | 95 % | 21 % | pour timing (9), dispenser moved >2 mm (7), cup >15 mm (2), grasp missed (2) |
-| 5 | 4/24, 17 % | 7-36 % | 90 % | 12 % | grasp closed on nothing (12), arms touched (4), fingers on the rim (3) |
+| 1 | 23/24, 96 % | 80-99 % | 98 % | 79 % | handle pinch closed on nothing (seed 22) |
+| 2 | 19/24, 79 % | 60-91 % | 98 % | 54 % | cup >15 mm from the bolted coaster (seeds 0, 1, 12), short grasp (seed 22), cup tilted (seed 17) |
+| 3 | 16/24, 67 % | 47-82 % | 95 % | 54 % | cup >15 mm (seeds 0, 1, 12), no pin pose (seeds 17, 20, 21), pour timing (seed 5), short grasp (seed 22) |
+| 4 | not rerun | — | 95 % | 8 % on 2026-10-28 | that 8 % used a fingertip sweep this tree no longer runs |
+| 5 | not rerun | — | 90 % | 23/24 earlier on 2026-10-29 | that 96 % is the flat-hand search before the later pour edits; one trial hit the tank |
 
-Levels 2 and 3 improved with the one-arm flip. Level 4 fell: the new lever search reaches only the radii on the open side of the tank, so when the handle lies behind it a fingertip sweep pushes the handle round, and that drags the taped dispenser. One Level 2 trial (seed 19) logged a 4684 N peak grip force, a single-step contact spike, not a sustained squeeze.
+The coaster does not move. The three Level 2 and Level 3 misses are the cup walking in the fingers during the carry, then the jaw opening camming it past 15 mm. The dish funnel does not pull it back. Level 1's nominal pour on this code is 6.95 s with the dispenser moved 1.38 mm. One Level 2 trial in an earlier table logged a multi-kilonewton grip spike; the 2026-10-29 Level 2 run's peak was a single-step contact glitch of the same kind, not a sustained squeeze.
 
 **Tried and taken out because they measured worse:**
 - Feeling the dish wall on four sides with the held cup before release (cup ended 19-24 mm off).

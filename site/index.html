@@ -418,16 +418,17 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
     <details class="acc rv">
       <summary><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/></svg></span><div><h3>Finding the lever without moving it</h3><p>Close on the knob, then close around the circle.</p></div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
       <div class="in"><ul>
-        <li>The tap arm closes on the centre of the knob and stops at a 20 mm gap. That confirms the stem without spinning it.</li>
-        <li>It then closes at points around a 24 mm circle, jaws held at 50 mm so the pads never reach the tank. A stall near 15 mm with a few newtons is the handle; a close on nothing is empty air.</li>
-        <li>The jaws can only reach the radii on the open side of the tank. If the handle lies behind it, a fingertip sweeps the circle until it touches the handle and pushes it to the pour angle.</li>
+        <li>The tap arm closes on the handle with the jaws across it. A stall at 15 mm, the width of the paddle, means that radius is square. A wider stall is only a graze and is not trusted.</li>
+        <li>The fingers open to 32 mm beside the handle, so the pads stay off the tank. Handles the wrist can square are turned to the pour angle and lifted.</li>
+        <li>A handle the forward pinch cannot reach is felt as a narrow stall on the reverse side. A short push is supposed to walk it into the pour sector. That push is in this build and has not been scored on 24 trials. A long fingertip sweep is not used.</li>
       </ul></div>
     </details>
     <details class="acc rv">
-      <summary><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16v16H4z" stroke-dasharray="2 3"/><circle cx="14" cy="10" r="3"/></svg></span><div><h3>Finding the cup without cameras</h3><p>Peck a grid, then fit where the cup must be.</p></div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <summary><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16v16H4z" stroke-dasharray="2 3"/><circle cx="14" cy="10" r="3"/></svg></span><div><h3>Finding the cup without cameras</h3><p>Stomp each half of the mat with the pads flat.</p></div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
       <div class="in"><ul>
-        <li>Open pads stamp a coarse grid from above until something stands up. A miss stops 8 cm above the mat, so the wrist never lands on the cup.</li>
-        <li>Every peck rules out the cup centres the arm and cup models cannot explain (set-membership). The next peck is the one that splits the remaining centres about in half.</li>
+        <li>Both grippers open and lay the black pads flat, parallel to the mat. The contact is the whole pad, not a fingertip.</li>
+        <li>The cup arm stomps the +y half. The tap arm stomps the −y half. A stomp that stops high has a cup under the pads. One that reaches the mat rules those centres out.</li>
+        <li>The map is the cup centres still consistent with the pad footprints. The next stomp splits what is left.</li>
       </ul></div>
     </details>
     <details class="acc rv">
@@ -443,8 +444,8 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
 
 <section id="results"><div class="wrap">
   <div class="rv"><span class="eyebrow">Results</span>
-  <h2>Every level passes nominally. None meets its randomized target yet.</h2>
-  <p class="lead">24 randomized trials per level, on the code in this build. Positions vary ±1 cm, the coaster ±8 mm without telling the skills, friction and mass ±25–30 %, gains ±10 %, plus base pose, sensor noise and 2–5 tick delay. Every fourth trial uses a plastic cup. Click a level to see why its trials failed.</p></div>
+  <h2>Levels 1–3 were rescored on this build. Levels 4 and 5 were not.</h2>
+  <p class="lead">24 trials, seeds 0–23, every fourth one a plastic cup. Object positions vary ±1 cm. The coaster is bolted and does not move; a cup sitting in it may rest ±2 mm off centre, and a stack still jitters ±8 mm. Friction and mass ±25–30 %, gains ±10 %, base pose, sensor noise and 2–5 tick delay. Click a scored level to see why its trials failed.</p></div>
   <div class="legend rv">
     <span><i style="width:14px;height:8px;border-radius:4px;background:var(--accent)"></i>pass rate</span>
     <span><i style="width:14px;height:2px;background:var(--text);opacity:.6"></i>95 % Wilson interval</span>
@@ -453,7 +454,7 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
   </div>
   <div class="chart rv" id="chart"></div>
   <details class="gaps rv" id="gaps">
-    <summary><div><span class="eyebrow">Gaps still remaining</span><h3>Why no level meets its target yet, and what has not been done</h3><p>Four failure causes from the randomized runs and two limits of the twin itself.</p></div><span class="count" aria-label="6 gaps">6</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+    <summary><div><span class="eyebrow">Gaps still remaining</span><h3>What this build still misses, and what has not been scored</h3><p>The rescored failures, the two levels that were not rerun, and the limits of the twin.</p></div><span class="count" aria-label="6 gaps">6</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
     <div class="issues" id="issues"></div>
   </details>
 </div></section>
@@ -467,12 +468,13 @@ dialog .cap p{margin:4px 0 0;font-size:14px;color:var(--muted)}
       <li><span><a href="https://doi.org/10.1109/tro.2017.2707092">Memory Unscented Particle Filter for 6-DOF Tactile Localization</a><br>Vezzani, Pattacini, Battistelli, Chisci, Natale · IEEE T-RO 2017 · <a href="https://arxiv.org/abs/1607.02757">arXiv</a>. A belief over object pose, updated from contact.</span></li>
       <li><span><a href="https://arxiv.org/abs/2205.04697">Information Gain Criteria for Active Tactile Action Selection</a><br>Murali, Dahiya, Kaboli · 2022. Choose the next touch by how much it should shrink the belief.</span></li>
       <li><span><a href="https://doi.org/10.1109/icra57385.2026.11697596">Touch-Based Object Localisation with Spatially-Aware Belief Entropy</a><br>Brudermüller, Jankowski, Toussaint, Hawes · ICRA 2026. Touch-only global localisation, then a grasp.</span></li>
-    </ol><div class="here"><b>What runs here:</b> a set-membership belief. Every peck rules out centres the models cannot explain, and the next peck splits the rest about in half. It is not a particle filter and does not compute expected entropy.</div></div>
+      <li><span><a href="https://doi.org/10.1177/02783649231196925">Tac2Pose: Tactile Object Pose Estimation from the First Touch</a><br>Bauza, Bronars, Rodriguez · IJRR 2023 · <a href="https://arxiv.org/abs/2204.11701">arXiv</a>. A grid of poses, each paired with the contact it would make.</span></li>
+    </ol><div class="here"><b>What runs here:</b> both grippers stomp with the black pads flat, one half of the mat each. A grid of cup centres is kept or ruled out from the pad footprint. It is not a particle filter, it does not compute expected entropy, and it does not use the Tac2Pose embedding.</div></div>
     <div class="paper rv"><h3>Finding a handle without moving it</h3><ol>
       <li><span><a href="https://arxiv.org/abs/2509.12969">Grasp State Estimation Using Tendon-Based Proprioception</a><br>Lee, Park, Cho · 2025. Pause the first finger that touches, so the object is not pushed before the grasp is set.</span></li>
       <li><span><a href="https://tlips.be/revisiting-proprioception-for-articulated-manipulation/">Revisiting Proprioceptive Sensing for Articulated Object Manipulation</a><br>Lips, wyffels · ICRA 2023 workshop. Estimate a joint from the gripper pose while in contact.</span></li>
       <li><span><a href="https://kormushev.com/papers/Jamali_OCEANS-2013.pdf">Contact State Estimation using Machine Learning</a><br>Jamali, Kormushev, Caldwell · OCEANS 2013. Classify contact on a T-bar valve from force and torque.</span></li>
-    </ol><div class="here"><b>What runs here:</b> a contact search. A close that stalls with the handle in the jaws gives its radius; an empty close does not. No learned classifier.</div></div>
+    </ol><div class="here"><b>What runs here:</b> the jaw width. A 15 mm stall is a square pinch and is turned to the pour angle. A narrower stall only says the paddle was touched. A short push is meant to walk that handle into reach. No learned classifier, and no fingertip sweep.</div></div>
   </div>
 </div></section>
 
@@ -511,25 +513,25 @@ const LEVELS=[
  {n:1,name:"Upright cup",title:"Level 1 · Upright cup in the coaster",desc:"The cup's position is known. Lift it out of the coaster, slide it under the spout, lift the lever for 7 s, and put it back."},
  {n:2,name:"Stack, height known",title:"Level 2 · Nested stack, height known",desc:"Grasp the top cup with the hand upside down while the other arm pins the stack, pull it free, then roll the wrist back. The cup comes up upright in the pour grip."},
  {n:3,name:"Stack, height unknown",title:"Level 3 · Nested stack, 3 to 11 cups",desc:"Peck down on the stack to measure its height and count the cups, then the same one-arm flip as Level 2."},
- {n:4,name:"Lever angle unknown",title:"Level 4 · Lever angle unknown",desc:"The handle can point anywhere around the valve. Close on the knob, then close around the circle until the handle is between the jaws."},
- {n:5,name:"Cup anywhere",title:"Level 5 · Cup somewhere on the mat",desc:"Stamp a coarse grid until something stands up, then peck the cup's edges and fit where it must be."},
+ {n:4,name:"Lever angle unknown",title:"Level 4 · Lever angle unknown",desc:"The handle can point anywhere around the valve. A 15 mm stall means the pinch is square. A handle outside that reach is felt and then given a short push toward the pour angle."},
+ {n:5,name:"Cup anywhere",title:"Level 5 · Cup somewhere on the mat",desc:"Both grippers lay the black pads flat and stomp their half of the mat. The cup arm takes one side, the tap arm the other, and the hits say where the cup is."},
 ];
 const DANCE=[["dance_rick","Never Gonna Give You Up","Rick Astley · 113 BPM tracked · sway, pump, wave, clap"],["dance_aha","Take On Me","a-ha · 84 BPM tracked · wave, circle, sway"],["dance_beegees","Stayin' Alive","Bee Gees · 103 BPM tracked · disco point, pump, clap"]];
 const PIPE=[
  ["Plant","1 kHz MuJoCo with an MIT-style law, τ = kp(q*−q) + kd(q̇*−q̇) + gravity, packed into position actuators. Friction, mass, gains, base pose, sensor noise and delay are randomized per trial. A power-up calibration fits the gravity feed-forward from position sag."],
  ["Sense","Contact is the torque residual left after the controller's own gravity and friction model, mapped to a Cartesian force with −pinv(Jᵀ). Guards fire on force steps, never on a true contact flag."],
  ["Plan","Strict mink IK, minimum-jerk synchronized trajectories, and straight Cartesian lines for the last centimetres. Every path is checked against the bench, the dispenser and the other arm before it runs."],
- ["Skills","Generators that yield once per 2 ms tick: side grasp, unstack, one-arm flip, spout insertion, lever search and lift, coaster place, pecks and fits. A failed check stops the run with its reason."],
+ ["Skills","Generators that yield once per 2 ms tick: side grasp, unstack, one-arm flip, spout insertion, lever pinch and lift, coaster place, and a flat-pad stomp on each half of the mat. A failed check stops the run with its reason."],
  ["Levels","Each level is a dependency graph over two arm lanes, so the tap arm walks to the lever while the cup is still being carried."],
  ["Referee","The only code that reads true poses. Ten checks per run: upright, centred, 7.0 s of flow with the cup under the outlet, dispenser still, no forbidden contact, stack untouched, arms at rest."],
 ];
 const ISSUES=[
- ["b","Cup lands more than 15 mm from the coaster centre","The most common failure in Levels 1–3 (11 of 72 trials). The coaster moves up to 8 mm in randomized trials and the skills are not told. The dish has about 2 cm of slack, so it does not centre the cup."],
- ["b","Level 4: turning the handle moves the dispenser","The search now finds the handle in almost every trial. When the handle lies behind the tank, the fingertip that pushes it round drags the taped dispenser more than 2 mm, and the pour can miss its 7.0 s window. A stiffer dispenser fixed the creep but broke Level 1's lever timing."],
- ["b","Level 5: the grasp closes on nothing","12 of 24. A peck that lands inside the cup's open mouth reads as \"no cup here\", so the fit can place the cup wrong. The arms also touched in 4 trials."],
- ["b","Level 3: no pin pose for some stack heights","5 of 24. For some stack heights the tap arm finds no collision-free pose to pin the lower stack."],
- ["w","Modelling limits","The arms are position actuators with the MIT law packed into the command. Nested cups are tethered, not colliding, so squeezing the top cup's middle does not couple into the cup inside it. Tap-arm base, dish radius and spigot geometry are inferred, not measured."],
- ["w","Not run on hardware","SimYam implements the i2rt Robot protocol and the same driver can target the real arms, but nothing has run on them. Scene-as-reset replay still fails, and the Python dependencies are not pinned."],
+ ["b","The cup walks in the fingers and misses the coaster","Levels 2 and 3, seeds 0, 1 and 12. The dish is bolted. It does not move, and its funnel does not pull a cup back inside 15 mm. The cup shifts along the jaw during the carry, and opening the jaws cams it farther."],
+ ["b","One Level 1 handle pinch closes on nothing","Seed 22. The jaws finish shut instead of stalling on the 15 mm paddle, so the pour never starts. The other 23 Level 1 trials passed, including the 7.0 ± 0.2 s pour."],
+ ["b","Level 3 still misses some stacks","Three trials have no collision-free pin on the lower stack. One grasp stalls short of the top cup, and one pour is shorter than 7.0 ± 0.2 s. Level 2 has the same short grasp on one seed, and one cup left tilted."],
+ ["b","Level 4 has not been rescored","Handles near the pour angle can be squared and parked with the dispenser under 2 mm in single-yaw checks. Handles on the far side of the tank are felt, and the short push that should turn them meets the tank or runs out of time. The old 8% table used a fingertip sweep this tree no longer runs."],
+ ["b","Level 5 has not been rescored on this pour","The flat two-hand stomp is what runs. Earlier on 2026-10-29 that search passed 23 of 24, with one pad hitting the tank during the pour. The pour path changed after that run."],
+ ["w","Modelling, and not run on hardware","Position actuators, a tethered stack, and inferred dish, tap-base and spigot geometry. Nothing in this tree has moved the real arms. Scene-as-reset replay still fails."],
 ];
 const $=s=>document.querySelector(s), reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
 const fmt=t=>{t=Math.max(0,t|0);return Math.floor(t/60)+":"+String(t%60).padStart(2,"0")};
@@ -569,7 +571,9 @@ async function select(n,play){
   const m=await getMeta(n); if(cur!==n) return;
   chapters=m.chapters||[];TEL=m.telemetry||null;drawSensors();
   const rr=RESULTS&&RESULTS.levels.find(x=>x.level===n);
-  $("#lm").innerHTML=(m.ok!==undefined?`<div class="metric"><b>${m.coaster_offset_mm} mm</b><span>cup from coaster centre</span></div><div class="metric"><b>${m.flow_s} s</b><span>pour (7.0 ± 0.2)</span></div><div class="metric"><b>${rr?rr.rate+" %":Math.round(m.sim_time_s)+" s"}</b><span>${rr?"randomized pass rate":"run time"}</span></div>`:"");
+  const rateTxt=rr?(rr.rate==null?"not rerun":rr.rate+" %"):Math.round(m.sim_time_s)+" s";
+  const rateLab=rr?(rr.rate==null?"24-trial rate on this build":"randomized pass rate"):"run time";
+  $("#lm").innerHTML=(m.ok!==undefined?`<div class="metric"><b>${m.coaster_offset_mm} mm</b><span>cup from coaster centre</span></div><div class="metric"><b>${m.flow_s} s</b><span>pour (7.0 ± 0.2)</span></div><div class="metric"><b>${rateTxt}</b><span>${rateLab}</span></div>`:"");
   const ol=$("#ch");ol.innerHTML="";let g="";
   chapters.forEach((c,i)=>{if(c.group!==g){g=c.group;const h=document.createElement("li");h.className="chgroup";h.textContent=g;ol.appendChild(h);}
     const arm=c.id.startsWith("tap.")?"tap":c.id.startsWith("cup.")?"cup":"both";
@@ -667,20 +671,27 @@ pick(0);
 /* results chart */
 function chart(){const c=$("#chart");c.innerHTML="";
   RESULTS.levels.forEach(r=>{const row=document.createElement("div");row.className="row";
-    const col=r.rate>=r.target?"var(--ok)":r.rate>=50?"var(--warn)":"var(--bad)";
+    const open = r.rate==null;
+    const col=open?"var(--muted)":r.rate>=r.target?"var(--ok)":r.rate>=50?"var(--warn)":"var(--bad)";
     const fmax=Math.max(...r.failures.map(f=>f[1]),1);
-    row.innerHTML=`<button type="button" aria-expanded="false"><span class="nm"><small>Level ${r.level}</small><b>${r.name}</b></span>
-      <span class="bararea" aria-hidden="true"><span class="bg"></span><span class="val" style="background:${col}" data-w="${r.rate}%"></span>
+    const bar=open
+      ? `<span class="bararea" aria-hidden="true"><span class="bg"></span><span class="tg" style="left:${r.target}%" title="target ${r.target} %"></span><span class="pv" style="left:${r.previous}%" title="last scored run ${r.previous} %"></span></span>`
+      : `<span class="bararea" aria-hidden="true"><span class="bg"></span><span class="val" style="background:${col}" data-w="${r.rate}%"></span>
         <span class="ci" style="left:${r.wilson[0]}%;width:${r.wilson[1]-r.wilson[0]}%"></span><span class="tg" style="left:${r.target}%" title="target ${r.target} %"></span>
-        <span class="pv" style="left:${r.previous}%" title="previous run ${r.previous} %"></span></span>
-      <span class="pct" style="color:${col}">${r.rate}%</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="more"><div><div class="fails"><div class="small muted">${r.passed} of ${r.trials} passed · 95 % interval ${r.wilson[0]}–${r.wilson[1]} % · target ${r.target} % · previous run ${r.previous} %${r.mean_time_s?` · ${r.mean_time_s} s per passing run`:""}</div>
-        ${r.failures.map(f=>`<div class="fail"><span>${f[0]}</span><span class="fb"><i style="width:${100*f[1]/fmax}%"></i></span><b>${f[1]}</b></div>`).join("")}</div></div></div>`;
-    const b=row.querySelector("button");b.setAttribute("aria-label",`Level ${r.level}, ${r.name}: ${r.rate} percent of ${r.trials} trials passed, target ${r.target} percent. Show failures.`);
+        <span class="pv" style="left:${r.previous}%" title="previous run ${r.previous} %"></span></span>`;
+    const detail=open
+      ? `<div class="small muted">Not scored on this build · target ${r.target} % · last scored run ${r.previous} %</div><p class="small" style="margin:8px 0 0">${r.unscored}</p>`
+      : `<div class="small muted">${r.passed} of ${r.trials} passed · 95 % interval ${r.wilson[0]}–${r.wilson[1]} % · target ${r.target} % · previous run ${r.previous} %${r.mean_time_s?` · ${r.mean_time_s} s per passing run`:""}</div>
+        ${r.failures.map(f=>`<div class="fail"><span>${f[0]}</span><span class="fb"><i style="width:${100*f[1]/fmax}%"></i></span><b>${f[1]}</b></div>`).join("")}`;
+    row.innerHTML=`<button type="button" aria-expanded="false"><span class="nm"><small>Level ${r.level}</small><b>${r.name}</b></span>
+      ${bar}
+      <span class="pct" style="color:${col}">${open?"—":r.rate+"%"}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="more"><div><div class="fails">${detail}</div></div></div>`;
+    const b=row.querySelector("button");b.setAttribute("aria-label",open?`Level ${r.level}, ${r.name}: not scored on this build. Show the note.`:`Level ${r.level}, ${r.name}: ${r.rate} percent of ${r.trials} trials passed, target ${r.target} percent. Show failures.`);
     b.onclick=()=>{row.classList.toggle("open");b.setAttribute("aria-expanded",row.classList.contains("open"));};
     c.appendChild(row);});
   if(c.classList.contains("in")) c.querySelectorAll(".val").forEach(v=>v.style.width=v.dataset.w);
-  document.querySelectorAll(".tr").forEach(s=>{const r=RESULTS.levels.find(x=>x.level===+s.dataset.l);if(r)s.textContent=` · ${r.rate}%`;});
+  document.querySelectorAll(".tr").forEach(s=>{const r=RESULTS.levels.find(x=>x.level===+s.dataset.l);if(r)s.textContent=r.rate==null?" · —":` · ${r.rate}%`;});
   if(cur) select(cur,false);}
 $("#pvt").onchange=e=>$("#chart").classList.toggle("nopv",!e.target.checked);
 fetch("data/results.json").then(r=>r.json()).then(d=>{RESULTS=d;chart();}).catch(()=>{$("#chart").innerHTML='<p class="muted small" style="padding:14px">Results could not be loaded.</p>';});

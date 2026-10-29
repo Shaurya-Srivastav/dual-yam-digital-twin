@@ -8,8 +8,8 @@ This is the work order. Later phases (imitation learning, reinforcement learning
 
 - The remaining stack is on the coaster spot and `stack_is_obstacle` defaults true. Nominal Levels 2 and 3 pass `stack_never_touched` in the last selftest. The audit's "L2/L3/L5 fail nominal" is stale.
 - The Level 2 wrist is turned to the flip attitude before the grasp.
-- Randomized rates were rerun after the one-arm flip and the lever-search change: 79 / 54 / 54 / 8 / 17 % (24 trials). Earlier runs: 79 / 42 / 42 / 21 / 12 % and 79 / 38 / 21 / 25 / 33 %.
-- The public site states those rates and does not claim the targets are met.
+- Randomized Levels 1–3 were rerun on 2026-10-29: 96 / 79 / 67 % (24 trials). The earlier table was 79 / 54 / 54 / 8 / 17 %. Levels 4 and 5 were not part of the 2026-10-29 run.
+- The public site states that split and does not claim the targets are met.
 
 ## Confirmed, still open after that reconcile
 

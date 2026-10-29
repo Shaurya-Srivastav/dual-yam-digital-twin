@@ -181,17 +181,47 @@ def s_slide_in_stack(ctx: Ctx):
 
 
 def s_close_stack(ctx: Ctx):
+    """Close on the top cup. A short chord means the hand is off the axis; step along the approach and close again."""
     cap = L.FORCE_CAP_STACK_TOP_N
-    res = yield from ctx.grip_close("cup", cap, rate=0.04)
-    w = res["width"]
-    if not res["stalled"]:
-        raise SkillFault("jaws closed on nothing at the top of the stack")
-    if not (0.058 < w < 0.074):
-        raise SkillFault(f"jaws stalled at {fmt_mm(w)}; the top cup's middle band is about 67 mm")
-    ctx.bel.found["stack_tcp"] = ctx.tcp("cup")[:3, 3].copy()
-    ctx.bel.cup_in_hand = True
-    ctx.scratch["top_hold_width"] = w
-    return {"msg": f"jaws stalled at {fmt_mm(w)} with {res['force']:.1f} N of {cap:.0f} N: top cup gripped"}
+    fr = ctx.scratch["stack_fr"]
+    kin = ctx.kin["cup"]
+    a = fr["a"]
+    r_c = 0.5 * L.CUP_HOLD_WIDTH_ON_AXIS
+    sign, s_prev, deep = 1.0, None, 0.0
+    last_w = 0.0
+    for n in range(6):
+        res = yield from ctx.grip_close("cup", cap, rate=0.04)
+        w = float(res["width"])
+        last_w = w
+        s = None
+        if res["stalled"] and w < 2.0 * r_c:
+            s = float(np.sqrt(max(r_c * r_c - (0.5 * w) ** 2, 0.0)))
+        # A stall inside the old band is the grasp the pour already uses. Only a shorter chord is off the axis.
+        if res["stalled"] and 0.058 < w < 0.074:
+            ctx.bel.found["stack_tcp"] = ctx.tcp("cup")[:3, 3].copy()
+            ctx.bel.cup_in_hand = True
+            ctx.scratch["top_hold_width"] = w
+            extra = f" after {n} re-try(ies)" if n else ""
+            return {"msg": f"jaws stalled at {fmt_mm(w)} with {res['force']:.1f} N of {cap:.0f} N: top cup gripped{extra}"}
+        yield from ctx.grip_open("cup", L.GRIPPER_MAX_OPEN_M)
+        if s is not None and s > 0.004:
+            if s_prev is not None and s > s_prev + 0.002:
+                sign = -sign
+            step = sign * min(s, 0.016)
+            s_prev = s
+            deep += step
+            ctx.event(f"stalled on a {w * 1000:.0f} mm chord, about {s * 1000:.0f} mm off the axis; moving {step * 1000:+.0f} mm")
+        else:
+            deep += 0.010
+        T = fr["grasp"].copy()
+        T[:3, 3] = fr["grasp"][:3, 3] + a * deep
+        try:
+            move = M.cart_move(kin, [ctx.tcp("cup"), T], ctx.q("cup"), v_cart=0.04, speed_scale=ctx.speed, min_T=0.45)
+            ctx.check_traj("cup", move, grip_width=L.GRIPPER_MAX_OPEN_M)
+            yield from ctx.play("cup", move)
+        except PlanError:
+            deep = -0.5 * deep
+    raise SkillFault(f"jaws stalled at {fmt_mm(last_w)}; the top cup's middle band is about 67 mm")
 
 
 # ---------------------------------------------------------------------------
@@ -218,9 +248,11 @@ def s_pin_approach(ctx: Ctx):
              np.array([0.4, 1.0, 0.6, 0.2, 0.0, 0.0]), np.array([0.8, 1.6, 1.2, 0.4, -0.6, 0.4]), q0]
     z_pin = stack_rim_z(ctx.bel.stack_n) - PIN_BAND_BELOW_RIM
     # A level pinch below about 5 cm puts the housing in the mat. Try that first on a tall stack, then tilt down.
-    tilts = (0.0, -20.0, -35.0, -50.0) if z_pin >= 0.05 else (-25.0, -40.0, -55.0, -15.0, 0.0)
+    tilts = ((0.0, -20.0, -35.0, -50.0, -65.0, -75.0) if z_pin >= 0.05
+             else (-25.0, -40.0, -55.0, -65.0, -75.0, -15.0, 0.0))
     last = ""
-    for az_deg in (60.0, 45.0, 75.0, 90.0, 30.0, 15.0, 0.0):
+    for az_deg in (60.0, 45.0, 75.0, 90.0, 30.0, 15.0, 0.0, -15.0, -30.0, -45.0, 105.0, 120.0, 135.0,
+                   150.0, 165.0, 180.0, -60.0, -75.0, -90.0, -120.0, -150.0):
         for tilt in tilts:
             a, j, tcp, z = pin_frame(ctx, az_deg, tilt)
             T_g = frame_from(a, j, tcp)
